@@ -1,0 +1,49 @@
+diff --git a/upstream/ffx-1.1.4/sdk/src/backends/vk/ffx_vk.cpp b/upstream/ffx-1.1.4/sdk/src/backends/vk/ffx_vk.cpp
+--- a/upstream/ffx-1.1.4/sdk/src/backends/vk/ffx_vk.cpp
++++ b/upstream/ffx-1.1.4/sdk/src/backends/vk/ffx_vk.cpp
+@@ -34,6 +34,14 @@
+ #endif  // _WIN32
+ 
+ #include <vulkan/vulkan.h>
++
++// bbport installs these optional hooks before recording frame-generation work.
++// Keep the SDK's resource reflection and defaults when no shader override is selected.
++extern "C" {
++    bool (*ffxVkShaderOverride)(uint32_t effect, uint32_t pass, uint32_t permutationOptions,
++                                const uint32_t** words, size_t* size) = nullptr;
++    void (*ffxVkJobMark)(uint32_t x, uint32_t y, uint32_t z) = nullptr;
++}
+ 
+ // prototypes for functions in the interface
+ FfxVersionNumber       GetSDKVersionVK(FfxInterface* backendInterface);
+@@ -3739,6 +3747,16 @@
+     shaderModuleCreateInfo.pCode = (uint32_t*)shaderBlob.data;
+     shaderModuleCreateInfo.codeSize = shaderBlob.size;
+ 
++    if (ffxVkShaderOverride) {
++        const uint32_t* words = nullptr;
++        size_t size = 0;
++        if (ffxVkShaderOverride(uint32_t(effect), uint32_t(pass), permutationOptions, &words, &size)
++            && words && size && size % sizeof(uint32_t) == 0) {
++            shaderModuleCreateInfo.pCode = words;
++            shaderModuleCreateInfo.codeSize = size;
++        }
++    }
++
+     if (backendContext->vkFunctionTable.vkCreateShaderModule(backendContext->device, &shaderModuleCreateInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+         return FFX_ERROR_BACKEND_API_ERROR;
+     }
+@@ -4092,6 +4110,13 @@
+             backendContext->vkFunctionTable.vkCmdBindDescriptorSets(vkCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipelineLayout->pipelineLayout, pipelineLayout->staticBufferUavSet, 1, &effectContext.bindlessBufferUavDescriptorSet, 0, nullptr);
+     }
+     
++    // Mark after resource transitions and bindings, immediately before the GPU job.
++    if (ffxVkJobMark) {
++        ffxVkJobMark(job->computeJobDescriptor.dimensions[0],
++                     job->computeJobDescriptor.dimensions[1],
++                     job->computeJobDescriptor.dimensions[2]);
++    }
++
+     // Dispatch (or dispatch indirect)
+     if (job->computeJobDescriptor.pipeline.cmdSignature)
+     {

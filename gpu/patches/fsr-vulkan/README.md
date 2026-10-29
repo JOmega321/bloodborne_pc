@@ -9,3 +9,6 @@ patches here to its working tree when they are not applied yet:
   On RADV PHOENIX (Ryzen Z1 Extreme: ROG Ally, Legion Go) it picked one for FSR 3.1's
   device-local resources, and the scene was white or full of colored noise (#85). Also sent to
   FireBurn/FSR-Vulkan#1.
+- `0003-...`: restores the optional shader-replacement and GPU-job profiling callbacks
+  already used by the port's frame-generation code. The original shader and resource
+  reflection remain the default when no override is selected.

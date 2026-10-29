@@ -1,7 +1,7 @@
 name: Windows x64 package
 on:
   push:
-    branches: [bbglorp-build]
+    branches: [bbglorp-build, bbglorp-windows-build]
   workflow_dispatch:
 permissions:
   contents: read
@@ -71,9 +71,6 @@ jobs:
       - name: Build native application and FSR shaders
         shell: msys2 {0}
         run: bash packaging/windows/build-native.sh
-      - name: Build DLSS bridge with NVIDIA-compatible MSVC runtime
-        shell: pwsh
-        run: ./packaging/windows/build-dlss.ps1
       - name: Preserve native build
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -85,6 +82,9 @@ jobs:
             fsr4_shaders/
           if-no-files-found: error
           retention-days: 7
+      - name: Build DLSS bridge with NVIDIA-compatible MSVC runtime
+        shell: pwsh
+        run: ./packaging/windows/build-dlss.ps1
       - name: Freeze Python runner and publish WPF launcher
         shell: pwsh
         run: |

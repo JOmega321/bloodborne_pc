@@ -1,8 +1,13 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 $ErrorActionPreference = 'Stop'
 $sdk = (Resolve-Path '.deps/dlss-sdk').Path
-$headers = Join-Path (Split-Path $env:CLANG64_BIN -Parent) 'include'
-if (!(Test-Path "$headers/vulkan/vulkan.h")) { throw 'Missing Vulkan headers' }
+$sourceHeaders = Join-Path (Split-Path $env:CLANG64_BIN -Parent) 'include'
+if (!(Test-Path "$sourceHeaders/vulkan/vulkan.h")) { throw 'Missing Vulkan headers' }
+# MSVC must not search MinGW's C/C++ standard-library headers.
+$headers = Join-Path $PWD 'out/windows/dlss-headers'
+New-Item -ItemType Directory -Force $headers | Out-Null
+Copy-Item (Join-Path $sourceHeaders 'vulkan') $headers -Recurse -Force
+Copy-Item (Join-Path $sourceHeaders 'vk_video') $headers -Recurse -Force
 $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
 $vs = (& $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -format json | ConvertFrom-Json | Select-Object -First 1)
 if (!$vs) { throw 'No installed Visual Studio C++ toolchain' }

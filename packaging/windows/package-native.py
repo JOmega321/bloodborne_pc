@@ -18,9 +18,9 @@ shutil.rmtree(stage, ignore_errors=True)
 stage.parent.mkdir(exist_ok=True)
 hidden = "argparse base64 bisect collections contextlib glob hashlib json math re shutil struct tempfile zlib io runpy xml.etree.ElementTree ctypes.wintypes socket urllib.request urllib.error http.server socketserver secrets uuid traceback datetime threading".split()
 command = [sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", "--console",
-           "--name", "bbport-run", "--icon", "packaging/bbport.ico",
-           "--distpath", str(stage.parent), "--workpath", "out/windows/pyi-work",
-           "--specpath", "out/windows", "--paths", str(root), "--paths", str(root / "scripts"),
+           "--name", "bbport-run", "--icon", str(root / "packaging/bbport.ico"),
+           "--distpath", str(stage.parent), "--workpath", str(root / "out/windows/pyi-work"),
+           "--specpath", str(root / "out/windows"), "--paths", str(root), "--paths", str(root / "scripts"),
            "--hidden-import", "run"]
 for module in hidden:
     command += ["--hidden-import", module]

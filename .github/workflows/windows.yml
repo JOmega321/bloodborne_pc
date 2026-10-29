@@ -55,9 +55,24 @@ jobs:
             mingw-w64-clang-x86_64-nlohmann-json
             mingw-w64-clang-x86_64-miniupnpc
             mingw-w64-clang-x86_64-python
-      - name: Build native port and FSR assets
+      - name: Verify unchanged native source
+        shell: bash
+        run: |
+          git fetch --depth=1 origin cfcd3a2acaf8b224a3e808e84eb6c02fe4afc67f
+          git diff --exit-code cfcd3a2acaf8b224a3e808e84eb6c02fe4afc67f HEAD -- gpu src third_party .gitmodules tools/gpu_capabilities.c tools/fetch_fsr4_assets.sh tools/fsr4_optimize.sh tools/fsr4_post_lds.pl tools/fsr4_pass11_guard.pl tools/Fsr4SpirvCrossFixes.pm
+      - name: Download proven native build
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          artifact-ids: 12904092125
+          run-id: 40886970870
+          github-token: ${{ github.token }}
+          path: .
+          merge-multiple: true
+      - name: Verify native runtime package versions
         shell: msys2 {0}
-        run: bash packaging/windows/build-native.sh
+        run: |
+          pacman -Q > out/windows/current-packages.txt
+          diff -u out/windows/msys2-packages.txt out/windows/current-packages.txt
       - name: Preserve native build
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -74,7 +89,7 @@ jobs:
         run: |
           $env:CLANG64_BIN = 'D:\a\_temp\msys64\clang64\bin'
           if (!(Test-Path $env:CLANG64_BIN)) { throw 'Missing CLANG64 runtime' }
-          python -m pip install pyinstaller==6.16.0 pefile==2024.8.26
+          python -m pip install pyinstaller==6.16.0 pefile==2023.2.7
           python packaging/windows/package-native.py
       - name: Preserve package candidate
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

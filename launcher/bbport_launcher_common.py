@@ -59,7 +59,7 @@ FSR411_BUILD_ERRORS = {
         "GE-Proton 10+, Proton Experimental, Proton-CachyOS 11), либо DLL не включает FSR 4.1 на "
         "этой видеокарте (Steam Deck?): тогда соберите на ПК с Radeon RX 7000/9000 и скопируйте "
         "папку fsr4_411. Подробности в журнале"),
-    6: ("Записанные проходы не совпали с тем, что повторяет bbport (другая версия DLL или "
+    6: ("Записанные проходы не совпали с тем, что повторяет bbglorp (другая версия DLL или "
         "новая видеокарта?): подробности в журнале"),
     7: "Не найден загрузчик FidelityFX 2.x",
     8: ("На NixOS запись идёт на самой системе (systemd --user) через umu-launcher из nix-shell, "
@@ -310,7 +310,7 @@ def save_ini(values, lines):
                 continue
         out.append(line)
     if not lines:
-        out.append("# bbport settings (in-game menu: Insert / hold L3+R3)")
+        out.append("# bbglorp settings (in-game menu: Insert / hold L3+R3)")
     for key, value in values.items():
         if key not in written and value is not None:
             out.append(f"{key}={value}")
@@ -535,8 +535,8 @@ def create_shortcuts():
             shutil.copyfile(source, target)
             icon = str(target)
             break
-    entry = ("[Desktop Entry]\nType=Application\nName=Bloodborne\n"
-             "Comment=Bloodborne (bbport) with the launcher's saved settings\n"
+    entry = ("[Desktop Entry]\nType=Application\nName=Bloodborne (bbglorp)\n"
+             "Comment=Bloodborne (bbglorp) with the launcher's saved settings\n"
              f"Exec={exec_line}\nIcon={icon}\nTerminal=false\nCategories=Game;\n"
              "StartupWMClass=bbport\n")
     desktop = None

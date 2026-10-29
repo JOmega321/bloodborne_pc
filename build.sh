@@ -73,7 +73,8 @@ fi
 # Generation are listed as unavailable.
 if [[ -n ${DLSS_SDK_ROOT:-} ]]; then
     cmake -S gpu/dlss_bridge -B out/dlss-bridge -G Ninja -DCMAKE_BUILD_TYPE=Release \
-        -DDLSS_SDK_ROOT="$DLSS_SDK_ROOT" >/dev/null
+        -DDLSS_SDK_ROOT="$DLSS_SDK_ROOT" \
+        -DVULKAN_INCLUDE="$(pkg-config --variable=includedir vulkan)" >/dev/null
     ninja -C out/dlss-bridge >/dev/null
     rm -f out/libnvidia-ngx-dlss.so.* out/libnvidia-ngx-dlssg.so.*
     cp out/dlss-bridge/libbbport_dlss.so "$DLSS_SDK_ROOT"/lib/Linux_x86_64/rel/libnvidia-ngx-dlss.so.* out/

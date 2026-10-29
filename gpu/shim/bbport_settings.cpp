@@ -522,7 +522,7 @@ void Save() {
         std::fclose(file);
     }
     if (!had_lines) {
-        out = "# bbport settings (in-game menu: Insert / L3+R3)\n";
+        out = "# bbglorp settings (in-game menu: Insert / L3+R3)\n";
     }
     for (size_t k = 0; k < keys.size(); ++k) {
         if (!written[k]) {

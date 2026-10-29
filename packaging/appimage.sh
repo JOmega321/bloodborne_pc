@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: Copyright 2026 bbport contributors
 # SPDX-License-Identifier: GPL-2.0-or-later
-# Builds dist/Bloodborne-bbport-x86_64.AppImage: the port's current build (run build.sh first),
+# Builds dist/Bloodborne-bbglorp-x86_64.AppImage: the port's current build (run build.sh first),
 # its scripts and the launcher, bundled with their Nix closure (nix-appimage: the AppImage mounts
 # its /nix/store with user namespaces, available on SteamOS and most desktops).
 # Running it opens the launcher; `--play` starts the game with the launcher's saved settings.
@@ -36,9 +36,9 @@ trap 'rm -rf "$work"' EXIT
 (cd "$work" && nix bundle --impure --bundler github:ralismark/nix-appimage/7946addbc0d97e358a6d7aefe5e82310f0fe6b18 \
     --expr "import $root/packaging {}")
 mkdir -p dist
-install -m755 "$work/bbport.AppImage" dist/Bloodborne-bbport-x86_64.AppImage
+install -m755 "$work/bbport.AppImage" dist/Bloodborne-bbglorp-x86_64.AppImage
 # A GC root for the package: nix-collect-garbage keeps it, and with it the outputs built here from
 # source (the Vulkan-only Mesa, GTK 4 without GStreamer, libadwaita, SDL3), so the next AppImage
 # does not build them again (only a nixpkgs update does).
 nix-build --impure packaging -o out/nix-roots/bbport > /dev/null
-ls -lh dist/Bloodborne-bbport-x86_64.AppImage
+ls -lh dist/Bloodborne-bbglorp-x86_64.AppImage

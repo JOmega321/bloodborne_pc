@@ -1,10 +1,10 @@
-Bloodborne (bbport) for Windows 10/11
+Bloodborne (bbglorp) for Windows 10/11
 
 You need your own dump of Bloodborne (CUSA03173, version 1.09) and a GPU with Vulkan 1.3 and a
 current driver (AMD Adrenalin, NVIDIA GeForce, Intel Arc).
 
 1. Unpack the zip anywhere (not into Program Files).
-2. Start Bloodborne.exe, choose the game folder (the one with eboot.bin), press Play.
+2. Start bbglorp.exe, choose the game folder (the one with eboot.bin), press Play.
 3. In the game: Insert (or L3+R3) opens the port's settings menu.
 
 Everything the port writes stays in this folder: bbport.ini (settings), user\ (saves),
@@ -26,7 +26,7 @@ games have it); a minute or two later the set is in fsr4_411\. FSR 4.1.2's model
 pick the driver's amdxcffx64.dll (Adrenalin 26.10.1+, under C:\Windows\System32\DriverStore\
 FileRepository\u0*\) together with the upscaler DLL. The recording runs on vkd3d-proton and DXVK
 (tools\fsr4cap\bin, LGPL-2.1 / zlib), so any GPU with Vulkan can build the set.
-DLSS (GeForce RTX): when bin\bbport_dlss.dll and bin\nvngx_dlss.dll are in the package, choose
+DLSS (GeForce RTX): the bridge, Super Resolution and Frame Generation libraries are bundled. Choose
 DLSS in the in-game menu (Insert) or the launcher; Frame Generation needs RTX 40/50 and
 bin\nvngx_dlssg.dll.
 
@@ -36,7 +36,7 @@ Bloodborne для Windows 10/11
 Нужен свой дамп Bloodborne (CUSA03173, версия 1.09) и видеокарта с Vulkan 1.3 и свежим драйвером.
 
 1. Распакуйте архив в любую папку (не в Program Files).
-2. Запустите Bloodborne.exe, выберите папку игры (где лежит eboot.bin), нажмите «Играть».
+2. Запустите bbglorp.exe, выберите папку игры (где лежит eboot.bin), нажмите «Играть».
 3. В игре: Insert (или L3+R3) открывает меню настроек порта.
 
 Всё, что пишет порт, остаётся в этой папке: bbport.ini, user\ (сохранения), out\, logs\ (журнал

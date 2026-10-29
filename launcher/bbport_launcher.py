@@ -22,7 +22,7 @@ from bbport_launcher_upscalers import UpscalerFiles
 class LauncherWindow(ContentPages, OnlinePage, TrophiesPage, LogPage, UpscalerFiles,
                      Adw.ApplicationWindow):
     def __init__(self, app):
-        super().__init__(application=app, title="Bloodborne")
+        super().__init__(application=app, title="Bloodborne (bbglorp)")
         self.set_default_size(1000, 760)
         self.settings = load_settings()
         set_language(self.settings.get("ui_language", ""))
@@ -67,7 +67,7 @@ class LauncherWindow(ContentPages, OnlinePage, TrophiesPage, LogPage, UpscalerFi
         side_header = Adw.HeaderBar()
         # The port's version (VERSION, issue #307).
         if (PORT_DIR / "VERSION").is_file():
-            version = Gtk.Label(label="bbport " + (PORT_DIR / "VERSION").read_text().strip())
+            version = Gtk.Label(label="bbglorp " + (PORT_DIR / "VERSION").read_text().strip())
             version.add_css_class("dim-label")
             side_header.pack_start(version)
         side = Adw.ToolbarView()
@@ -85,7 +85,7 @@ class LauncherWindow(ContentPages, OnlinePage, TrophiesPage, LogPage, UpscalerFi
         content.set_content(self.toasts)
 
         self.split = Adw.NavigationSplitView(min_sidebar_width=200, max_sidebar_width=260)
-        self.split.set_sidebar(Adw.NavigationPage(title="Bloodborne", child=side))
+        self.split.set_sidebar(Adw.NavigationPage(title="Bloodborne (bbglorp)", child=side))
         self.content_page = Adw.NavigationPage(title="", child=content)
         self.split.set_content(self.content_page)
         # Narrow windows: one pane at a time (the sidebar first, a section opens over it).
@@ -1029,7 +1029,7 @@ def play():
     # was the module default (Russian) whatever was chosen (#134).
     set_language(settings.get("ui_language", ""))
     if not (Path(settings["game_dir"]).expanduser() / "eboot.bin").is_file():
-        print("bbport: choose the game folder in the launcher first", file=sys.stderr)
+        print("bbglorp: choose the game folder in the launcher first", file=sys.stderr)
         return 1
     os.chdir(PORT_DIR)
     os.execvpe("bash", ["bash", str(PORT_DIR / "run.sh")], game_environment(settings))

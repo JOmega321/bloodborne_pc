@@ -203,7 +203,7 @@ class UpscalerFiles:
             else:
                 models = ", ".join(details.get("models", [])) or tr("нет")
                 body = tr(
-                    "{}: версия {}, модели FSR 4: {}.\n\nbbport повторяет только официальную FSR 4.1.x "
+                    "{}: версия {}, модели FSR 4: {}.\n\nbbglorp повторяет только официальную FSR 4.1.x "
                     "от AMD (модель v07_fp8_no_scale): например, FSR4_LATEST из OptiScaler или "
                     "amd_fidelityfx_upscaler_dx12.dll из игры с FSR 4.1. Сборки сообщества (4.0.2b и "
                     "подобные) устроены иначе и пока не поддерживаются.").format(

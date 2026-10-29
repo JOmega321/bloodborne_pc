@@ -10,7 +10,10 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>Bloodborne</AssemblyName>
+    <AssemblyName>bbglorp</AssemblyName>
+    <Product>Bloodborne (bbglorp)</Product>
+    <Title>Bloodborne (bbglorp)</Title>
+    <Description>bbglorp native Bloodborne launcher</Description>
     <RootNamespace>BbportLauncher</RootNamespace>
     <ApplicationIcon>../../packaging/bbport.ico</ApplicationIcon>
     <!-- ThemeMode (the Fluent theme) is marked experimental in .NET 9. -->

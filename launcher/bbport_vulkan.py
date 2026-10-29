@@ -224,7 +224,7 @@ def main():
     except OSError as error:
         # Startup diagnostics should identify driver/cache failures rather than
         # falling through to an unrelated Vulkan assertion.
-        print(f"bbport: cannot prepare NVIDIA driver: {error}", file=sys.stderr)
+        print(f"bbglorp: cannot prepare NVIDIA driver: {error}", file=sys.stderr)
         return 1
     if "--vulkan-info" in sys.argv[1:]:
         tool = os.environ.get("BB_VULKANINFO", "vulkaninfo")

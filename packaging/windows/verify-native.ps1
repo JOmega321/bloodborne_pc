@@ -2,11 +2,11 @@
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
-$package = Join-Path $PWD 'dist/bbport-windows'
+$package = Join-Path $PWD 'dist/bbglorp-windows'
 $test = Join-Path $env:RUNNER_TEMP 'bbport test with spaces'
 New-Item -ItemType Directory -Force $test | Out-Null
-Copy-Item $package (Join-Path $test 'bbport-windows') -Recurse
-$package = Join-Path $test 'bbport-windows'
+Copy-Item $package (Join-Path $test 'bbglorp-windows') -Recurse
+$package = Join-Path $test 'bbglorp-windows'
 $env:BB_DATA_DIR = Join-Path $test 'external data'
 $env:BB_LAUNCHER_SECTION = 'graphics'
 $config = Join-Path ([Environment]::GetFolderPath('ApplicationData')) 'bbport-launcher'
@@ -26,7 +26,7 @@ $p = Start-Process (Join-Path $package 'bin/bb-probe.exe') -WorkingDirectory $pa
 if (!$p.WaitForExit(30000)) { $p.Kill(); throw 'Native usage check timed out' }
 $output = (Get-Content "$test/native.out","$test/native.err" -Raw) -join "`n"
 if ($output -notmatch 'Usage:|usage:') { throw "Native runtime failed usage check (exit $($p.ExitCode))" }
-$p = Start-Process (Join-Path $package 'Bloodborne.exe') -WorkingDirectory $package -PassThru
+$p = Start-Process (Join-Path $package 'bbglorp.exe') -WorkingDirectory $package -PassThru
 try {
     $window = $null
     for ($i=0; $i -lt 60; $i++) {
@@ -39,6 +39,9 @@ try {
         }
     }
     if (!$window) { throw 'WPF launcher did not open a window' }
+    if ($window.Current.Name -ne 'Bloodborne (bbglorp)') { throw 'Window title is not branded bbglorp' }
+    $brand = [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty, ('bbglorp ' + (Get-Content VERSION -Raw).Trim()))
+    if (!$window.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $brand)) { throw 'bbglorp version label was not rendered' }
     $condition = [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty, 'Texture quality')
     $label = $null
     for ($i=0; $i -lt 20; $i++) {

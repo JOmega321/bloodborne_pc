@@ -205,7 +205,7 @@ pkgs.stdenv.mkDerivation {
     cat > $out/share/applications/bbport.desktop <<'DESKTOP'
     [Desktop Entry]
     Type=Application
-    Name=Bloodborne (bbport)
+    Name=Bloodborne (bbglorp)
     Comment=Native PC port launcher for your own copy of Bloodborne
     Exec=bbport
     Icon=bbport
@@ -220,7 +220,7 @@ pkgs.stdenv.mkDerivation {
     <?xml version="1.0" encoding="UTF-8"?>
     <component type="desktop-application">
       <id>bbport</id>
-      <name>Bloodborne (bbport)</name>
+      <name>Bloodborne (bbglorp)</name>
       <summary>Native PC port launcher for your own copy of Bloodborne</summary>
       <metadata_license>CC0-1.0</metadata_license>
       <description>

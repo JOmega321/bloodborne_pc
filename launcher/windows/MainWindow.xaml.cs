@@ -104,7 +104,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         var version = Path.Combine(Store.PackageDir, "VERSION");
-        VersionText.Text = File.Exists(version) ? "bbport " + File.ReadAllText(version).Trim() : "bbport";
+        VersionText.Text = File.Exists(version) ? "bbglorp " + File.ReadAllText(version).Trim() : "bbglorp";
         ApplyLanguage();
         Closing += (_, _) => store.Save();
         SourceInitialized += (_, _) => DarkTitleBar();

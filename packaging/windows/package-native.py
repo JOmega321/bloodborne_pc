@@ -13,7 +13,7 @@ import pefile
 
 root = Path(__file__).resolve().parents[2]
 os.chdir(root)
-stage = root / "dist" / "bbport-windows"
+stage = root / "dist" / "bbglorp-windows"
 shutil.rmtree(stage, ignore_errors=True)
 stage.parent.mkdir(exist_ok=True)
 hidden = "argparse base64 bisect collections contextlib glob hashlib json math re shutil struct tempfile zlib io runpy xml.etree.ElementTree ctypes.wintypes socket urllib.request urllib.error http.server socketserver secrets uuid traceback datetime threading".split()
@@ -30,12 +30,23 @@ subprocess.run(["dotnet", "publish", "launcher/windows", "-c", "Release", "-r", 
                 "--self-contained", "true", "-p:PublishSingleFile=true",
                 "-p:IncludeNativeLibrariesForSelfExtract=true", "-p:EnableCompressionInSingleFile=true",
                 "-p:DebugType=none", "-o", "out/windows/wpf"], check=True)
-shutil.copy2("out/windows/wpf/Bloodborne.exe", stage)
+shutil.copy2("out/windows/wpf/bbglorp.exe", stage)
 (stage / "bin").mkdir()
 (stage / "online").mkdir()
 for name in ("bb-probe.exe", "bb-gpu-capabilities.exe"):
     shutil.copy2(root / "out/windows/native" / name, stage / "bin")
 shutil.copy2(root / "out/windows/native/bbnet20.dll", stage / "online")
+
+# Require the bridge and both NVIDIA release libraries for tester packages.
+sdk = root / ".deps/dlss-sdk"
+shutil.copy2(root / "out/windows/dlss-bridge/Release/bbport_dlss.dll", stage / "bin")
+for name in ("nvngx_dlss.dll", "nvngx_dlssg.dll"):
+    shutil.copy2(sdk / "lib/Windows_x86_64/rel" / name, stage / "bin")
+shutil.copy2(sdk / "LICENSE.txt", stage / "NVIDIA-DLSS-LICENSE.txt")
+(stage / "DLSS-SDK-COMMIT.txt").write_text(
+    subprocess.check_output(["git", "-C", str(sdk), "rev-parse", "HEAD"], text=True), encoding="utf-8")
+subprocess.run([sys.executable, "packaging/verify-dlss.py", str(stage / "bin"),
+                "--license-dir", str(stage)], check=True)
 
 # Resolve every PE import recursively, preferring CLANG64's matching libc++/unwind.
 # System and API-set DLLs come from Windows, including the driver's Vulkan loader.

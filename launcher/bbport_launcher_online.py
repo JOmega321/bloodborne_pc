@@ -190,7 +190,7 @@ class OnlinePage:
 
         def work():
             try:
-                name, token = online.thd_sign_in(server, show_code, device="bbport on Linux",
+                name, token = online.thd_sign_in(server, show_code, device="bbglorp on Linux",
                                                   cancelled=lambda: self.thd_cancel)
             except ValueError as error:
                 GLib.idle_add(done, "", "", str(error))

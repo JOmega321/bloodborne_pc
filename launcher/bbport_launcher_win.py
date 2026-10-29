@@ -119,7 +119,7 @@ def write_ini(changes):
     try:
         lines = INI_FILE.read_text(encoding='utf-8', errors='replace').splitlines()
     except OSError:
-        lines = ['# bbport settings (in-game menu: Insert / L3+R3)']
+        lines = ['# bbglorp settings (in-game menu: Insert / L3+R3)']
     left = dict(changes)
     for i, line in enumerate(lines):
         if '=' in line and not line.lstrip().startswith('#'):
@@ -215,7 +215,7 @@ def main_window():
     root = tk.Tk()
     version_file = PACKAGE_DIR / 'VERSION'  # issue #307
     version = version_file.read_text().strip() if version_file.is_file() else ''
-    root.title(f'Bloodborne (bbport {version})' if version else 'Bloodborne (bbport)')
+    root.title(f'Bloodborne (bbglorp {version})' if version else 'Bloodborne (bbglorp)')
     root.geometry('900x700')
     icon = PACKAGE_DIR / 'launcher' / 'bloodborne.ico'
     if icon.is_file():

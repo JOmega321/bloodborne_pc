@@ -290,7 +290,7 @@ extern "C" int bbgpu_init(const BbGpuConfig* config) {
     Common::ElfInfo::Instance().Set(config->serial ? config->serial : "UNKNOWN",
                                     config->title ? config->title : "", config->sdk_version,
                                     config->psf_attributes);
-    const std::string title = config->title ? config->title : "Bloodborne";
+    const std::string title = config->title ? std::string(config->title) + " (bbglorp)" : "Bloodborne (bbglorp)";
     const s32 width = config->width, height = config->height;
     g_window_thread = std::thread([title, width, height] {
         Common::SetCurrentThreadName("bb:window");

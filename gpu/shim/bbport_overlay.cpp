@@ -288,8 +288,8 @@ void Menu() {
     ImGui::SetNextWindowSize(ImVec2(620.0f * base_scale, 0.0f), ImGuiCond_Appearing);
     bool keep_open = true;
     if (!ImGui::Begin(
-            BbSettings::MenuText("Bloodborne - Graphics  (Insert / hold L3+R3)###bbport_settings",
-                                 "Bloodborne — настройки  (Insert / удерживать L3+R3)###bbport_settings"),
+            BbSettings::MenuText("Bloodborne (bbglorp) - Graphics  (Insert / hold L3+R3)###bbport_settings",
+                                 "Bloodborne (bbglorp) — настройки  (Insert / удерживать L3+R3)###bbport_settings"),
             &keep_open, ImGuiWindowFlags_NoCollapse)) {
         ImGui::End();
         return;
@@ -678,7 +678,7 @@ void Init(const Vulkan::Instance& instance, vk::Format format, u32 image_count) 
     io.IniFilename = nullptr; // window positions are not kept
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_NavEnableGamepad;
     io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
-    io.BackendPlatformName = "bbport";
+    io.BackendPlatformName = "bbglorp";
 
     ImGui::StyleColorsDark();
     ImGuiStyle& style = ImGui::GetStyle();

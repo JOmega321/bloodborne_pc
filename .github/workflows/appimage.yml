@@ -1,7 +1,7 @@
 name: Linux AppImage
 on:
   push:
-    branches: [english-texture-quality-appimage]
+    branches: [bbglorp-build]
   workflow_dispatch:
 permissions:
   contents: read
@@ -18,10 +18,21 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           submodules: recursive
+      - name: Fetch pinned NVIDIA DLSS SDK
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          repository: NVIDIA/DLSS
+          ref: 9981c6350dc58c0ce21f024fd65e31e851c31689
+          path: .deps/dlss-sdk
+          sparse-checkout: |
+            include
+            lib/Linux_x86_64
+            LICENSE.txt
+          persist-credentials: false
       - name: Install display test tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb xauth xdotool dbus-x11 imagemagick libfuse2 desktop-file-utils
+          sudo apt-get install -y xvfb xauth xdotool dbus-x11 imagemagick libfuse2 desktop-file-utils openbox wmctrl
       - uses: DeterminateSystems/nix-installer-action@9383ce2bf08796b65508822f5982f49151badc4e
         with:
           extra-conf: |
@@ -36,6 +47,9 @@ jobs:
           from bbport_i18n import set_language, tr
           set_language('en')
           assert tr('Качество текстур') == 'Texture quality'
+          assert tr('Крупные текстуры в видеопамяти') == 'Large textures in VRAM'
+          assert tr('Половина') == 'Half'
+          assert tr('Четверть') == 'Quarter'
           set_language('ru')
           assert tr('Качество текстур') == 'Качество текстур'
           PY
@@ -51,7 +65,10 @@ jobs:
           CCACHE_MAXSIZE: 2G
         run: |
           mkdir -p dist
+          export DLSS_SDK_ROOT="$PWD/.deps/dlss-sdk"
           nix-shell --run 'bash build.sh && bash tools/fetch_fsr4_assets.sh'
+          nix-shell --run 'python3 packaging/verify-dlss.py out'
+          git -C .deps/dlss-sdk rev-parse HEAD > dist/dlss-sdk-commit.txt
           git rev-parse HEAD > dist/source-commit.txt
           git submodule status --recursive > dist/submodules.txt
           nix-shell --run 'gcc --version; cmake --version; pkg-config --modversion sdl3 vulkan' > dist/toolchain.txt
@@ -67,7 +84,7 @@ jobs:
           key: bbport-nix-gcc16-${{ github.sha }}
       - name: Preserve successful native build
         run: |
-          tar -czf native-stage.tar.gz out/bb-probe out/bb-gpu-capabilities out/gpu/libbbgpu.so out/gpu/libbbnet20.so
+          tar -czf native-stage.tar.gz out/bb-probe out/bb-gpu-capabilities out/gpu/libbbgpu.so out/gpu/libbbnet20.so out/libbbport_dlss.so out/libnvidia-ngx-dlss*.so.* out/NVIDIA-DLSS-LICENSE.txt
           sha256sum native-stage.tar.gz > native-stage.tar.gz.sha256
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -85,17 +102,19 @@ jobs:
         run: |
           bash packaging/appimage.sh
           stamp=$(TZ=America/New_York date +%m%d%y)
-          name="Bloodborne-bbport-x86_64-${stamp}v${GITHUB_RUN_NUMBER}.AppImage"
-          mv dist/Bloodborne-bbport-x86_64.AppImage "dist/$name"
+          name="Bloodborne-bbglorp-x86_64-${stamp}v${GITHUB_RUN_NUMBER}.AppImage"
+          mv dist/Bloodborne-bbglorp-x86_64.AppImage "dist/$name"
           echo "APPIMAGE_FILE=$PWD/dist/$name" >> "$GITHUB_ENV"
           (cd dist && sha256sum "$name" > "$name.sha256")
           nix-store -qR "$(readlink -f out/nix-roots/bbport)" > dist/runtime-closure.txt
+          package=$(readlink -f out/nix-roots/bbport)
+          nix-shell --run "python3 packaging/verify-dlss.py '$package/share/bbport/bin' --license-dir '$package/share/bbport'"
       - name: Check final AppImage CLI and launcher startup
         run: bash packaging/verify-appimage.sh "$APPIMAGE_FILE"
       - name: Upload verified AppImage
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: Bloodborne-bbport-AppImage-x86_64
+          name: Bloodborne-bbglorp-AppImage-x86_64
           path: dist/
           if-no-files-found: error
           retention-days: 30

@@ -296,8 +296,8 @@ void DefineTexts() {
     // forms): the picture, then the game's effects. Choices are the game's pop-up rows
     // (SelectRow). The other patches (intros, the free camera, the debug menu), the game's own AA
     // and the FPS counter are in the overlay menu and the launcher.
-    page("Display", "Изображение", "Aspect ratio, resolution, upscaler and detail (bbport)",
-         "Соотношение сторон, разрешение, апскейлер и детализация (bbport)", ControlsLayout);
+    page("Display", "Изображение", "Aspect ratio, resolution, upscaler and detail (bbglorp)",
+         "Соотношение сторон, разрешение, апскейлер и детализация (bbglorp)", ControlsLayout);
     row(Aspect, "Aspect ratio", "Соотношение сторон",
         "Of the final frame: wider sees more to the sides, the UI keeps to the screen edges",
         "Готового кадра: шире - больше видно по бокам, интерфейс у краёв экрана",
@@ -342,8 +342,8 @@ void DefineTexts() {
          AddText("Quarter", "Четверть")},
         Kind::Select);
 
-    page("Effects", "Эффекты", "The game's effects (bbport): aberration and DoF at once, the rest at the next load",
-         "Эффекты игры (bbport): аберрация и DoF сразу, остальные — со следующей загрузки", ControlsLayout);
+    page("Effects", "Эффекты", "The game's effects (bbglorp): aberration and DoF at once, the rest at the next load",
+         "Эффекты игры (bbglorp): аберрация и DoF сразу, остальные — со следующей загрузки", ControlsLayout);
 
     // Short names for the game's narrow name column (BbSettings::Effects order); the help line
     // has the details.

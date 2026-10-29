@@ -179,7 +179,7 @@ public sealed class Store
         }
         catch (IOException)
         {
-            lines = new List<string> { "# bbport settings (in-game menu: Insert / L3+R3)" };
+            lines = new List<string> { "# bbglorp settings (in-game menu: Insert / L3+R3)" };
         }
         var left = new HashSet<string>(iniChanged, StringComparer.Ordinal);
         for (var i = 0; i < lines.Count; ++i)

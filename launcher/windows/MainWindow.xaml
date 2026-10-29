@@ -1,7 +1,7 @@
 <Window x:Class="BbportLauncher.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Bloodborne" Width="1060" Height="760" MinWidth="720" MinHeight="480"
+        Title="Bloodborne (bbglorp)" Width="1060" Height="760" MinWidth="720" MinHeight="480"
         Icon="pack://application:,,,/bloodborne.png" WindowStartupLocation="CenterScreen">
   <Window.Resources>
     <!-- The sidebar's entries as in Windows' Settings: a soft highlight and an accent bar. -->
@@ -42,7 +42,7 @@
       <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10,8,10,14">
         <Image Source="pack://application:,,,/bloodborne.png" Width="36" Height="36" Margin="0,0,10,0" />
         <StackPanel VerticalAlignment="Center">
-          <TextBlock Text="Bloodborne" FontSize="18" FontWeight="SemiBold" />
+          <TextBlock Text="Bloodborne (bbglorp)" FontSize="18" FontWeight="SemiBold" />
           <TextBlock x:Name="VersionText" FontSize="12" Opacity="0.65" />
         </StackPanel>
       </StackPanel>

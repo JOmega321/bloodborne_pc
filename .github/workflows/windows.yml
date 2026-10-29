@@ -1,7 +1,7 @@
 name: Windows x64 package
 on:
   push:
-    branches: [english-windows-build]
+    branches: [bbglorp-build]
   workflow_dispatch:
 permissions:
   contents: read
@@ -17,6 +17,17 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           submodules: recursive
+      - name: Fetch pinned NVIDIA DLSS SDK
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          repository: NVIDIA/DLSS
+          ref: 9981c6350dc58c0ce21f024fd65e31e851c31689
+          path: .deps/dlss-sdk
+          sparse-checkout: |
+            include
+            lib/Windows_x86_64
+            LICENSE.txt
+          persist-credentials: false
       - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
         with:
           path: C:/ccache
@@ -57,24 +68,12 @@ jobs:
             mingw-w64-clang-x86_64-nlohmann-json
             mingw-w64-clang-x86_64-miniupnpc
             mingw-w64-clang-x86_64-python
-      - name: Verify unchanged native source
-        shell: bash
-        run: |
-          git fetch --depth=1 origin cfcd3a2acaf8b224a3e808e84eb6c02fe4afc67f
-          git diff --exit-code cfcd3a2acaf8b224a3e808e84eb6c02fe4afc67f HEAD -- gpu src third_party .gitmodules tools/gpu_capabilities.c tools/fetch_fsr4_assets.sh tools/fsr4_optimize.sh tools/fsr4_post_lds.pl tools/fsr4_pass11_guard.pl tools/Fsr4SpirvCrossFixes.pm
-      - name: Download proven native build
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
-        with:
-          artifact-ids: 12904092125
-          run-id: 40886970870
-          github-token: ${{ github.token }}
-          path: .
-          merge-multiple: true
-      - name: Verify native runtime package versions
+      - name: Build native application and FSR shaders
         shell: msys2 {0}
-        run: |
-          pacman -Q > out/windows/current-packages.txt
-          python -c "from pathlib import Path; assert Path('out/windows/msys2-packages.txt').read_text().splitlines() == Path('out/windows/current-packages.txt').read_text().splitlines(), 'Native build and runtime package versions differ'"
+        run: bash packaging/windows/build-native.sh
+      - name: Build DLSS bridge with NVIDIA-compatible MSVC runtime
+        shell: pwsh
+        run: ./packaging/windows/build-dlss.ps1
       - name: Preserve native build
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -97,7 +96,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: windows-package-candidate
-          path: dist/bbport-windows/
+          path: dist/bbglorp-windows/
           if-no-files-found: error
           retention-days: 7
       - name: Verify packaged Windows launcher
@@ -106,14 +105,14 @@ jobs:
       - name: Archive verified package
         shell: pwsh
         run: |
-          $name = "Bloodborne-bbport-windows-x64-$(Get-Content VERSION -Raw)".Trim()
+          $name = "Bloodborne-bbglorp-windows-x64-$(Get-Content VERSION -Raw)".Trim()
           $zip = "dist/$name.zip"
-          Compress-Archive -Path dist/bbport-windows -DestinationPath $zip -CompressionLevel Optimal
+          Compress-Archive -Path dist/bbglorp-windows -DestinationPath $zip -CompressionLevel Optimal
           $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
           "$hash  $name.zip" | Set-Content "$zip.sha256" -Encoding ascii
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: Bloodborne-bbport-Windows-x64
+          name: Bloodborne-bbglorp-Windows-x64
           path: |
             dist/*.zip
             dist/*.sha256

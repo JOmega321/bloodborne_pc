@@ -38,7 +38,7 @@ wmctrl -m > /dev/null
 app_pid=$!
 for attempt in $(seq 1 60); do
     kill -0 "$app_pid"
-    windows=$(xdotool search --onlyvisible --name "^Bloodborne$" || true)
+    windows=$(xdotool search --onlyvisible --name "^Bloodborne \(bbglorp\)$" || true)
     if [[ -n $windows ]]; then
         read -r window <<< "$windows"
         import -window root "$2/dist/launcher-english.png"

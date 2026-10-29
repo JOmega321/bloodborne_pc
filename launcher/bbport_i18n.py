@@ -10,6 +10,14 @@ import os
 
 EN = {
     "Качество текстур": "Texture quality",
+    "Крупные текстуры в видеопамяти": "Large textures in VRAM",
+    "Авто (половина при 3 ГБ видеопамяти и меньше)": "Auto (half with 3 GB of VRAM or less)",
+    "Полное": "Full",
+    "Половина": "Half",
+    "Четверть": "Quarter",
+    "Половина при 3 ГБ видеопамяти и меньше": "Half with 3 GB of VRAM or less",
+    "Вдвое меньше по каждой стороне": "Half the size on each side",
+    "Вчетверо меньше по каждой стороне": "A quarter of the size on each side",
     "Качество изображения": "Image quality",
     "Библиотеки AMD и NVIDIA": "AMD and NVIDIA libraries",
     "Свои файлы AMD и NVIDIA: порт их не распространяет": "Your own AMD and NVIDIA files: the port does not ship them",
@@ -217,8 +225,8 @@ EN = {
     "DLL апскейлера AMD (amd_fidelityfx_upscaler_dx12.dll)": "AMD upscaler DLL (amd_fidelityfx_upscaler_dx12.dll)",
     "нет": "none",
     "Эта DLL не подходит": "This DLL does not fit",
-    "{}: версия {}, модели FSR 4: {}.\n\nbbport повторяет только официальную FSR 4.1.x от AMD (модель v07_fp8_no_scale): например, FSR4_LATEST из OptiScaler или amd_fidelityfx_upscaler_dx12.dll из игры с FSR 4.1. Сборки сообщества (4.0.2b и подобные) устроены иначе и пока не поддерживаются.":
-        "{}: version {}, FSR 4 models: {}.\n\nbbport replays AMD's official FSR 4.1.x only (model v07_fp8_no_scale): for example FSR4_LATEST from OptiScaler, or amd_fidelityfx_upscaler_dx12.dll from a game with FSR 4.1. Community builds (4.0.2b and the like) are laid out differently and are not supported yet.",
+    "{}: версия {}, модели FSR 4: {}.\n\nbbglorp повторяет только официальную FSR 4.1.x от AMD (модель v07_fp8_no_scale): например, FSR4_LATEST из OptiScaler или amd_fidelityfx_upscaler_dx12.dll из игры с FSR 4.1. Сборки сообщества (4.0.2b и подобные) устроены иначе и пока не поддерживаются.":
+        "{}: version {}, FSR 4 models: {}.\n\nbbglorp replays AMD's official FSR 4.1.x only (model v07_fp8_no_scale): for example FSR4_LATEST from OptiScaler, or amd_fidelityfx_upscaler_dx12.dll from a game with FSR 4.1. Community builds (4.0.2b and the like) are laid out differently and are not supported yet.",
     "Загрузчик не подходит": "The loader does not fit",
     "Загрузчик FidelityFX (amd_fidelityfx_loader_dx12.dll или amd_fidelityfx_dx12.dll)":
         "FidelityFX loader (amd_fidelityfx_loader_dx12.dll or amd_fidelityfx_dx12.dll)",
@@ -232,8 +240,8 @@ EN = {
     "FSR 4.1.1 не собран": "FSR 4.1.1 was not built",
     "DLL не подходит: подробности в журнале": "The DLL does not fit: details in the log",
     "Не хватает программ для сборки: список в журнале": "Tools for the build are missing: the list is in the log",
-    "Записанные проходы не совпали с тем, что повторяет bbport (другая версия DLL или новая видеокарта?): подробности в журнале":
-        "The recorded passes do not match what bbport replays (another DLL version, or a new GPU?): details in the log",
+    "Записанные проходы не совпали с тем, что повторяет bbglorp (другая версия DLL или новая видеокарта?): подробности в журнале":
+        "The recorded passes do not match what bbglorp replays (another DLL version, or a new GPU?): details in the log",
     "Не найден загрузчик FidelityFX 2.x": "No FidelityFX loader 2.x found",
     "Не найден подходящий Proton: установите GE-Proton 10 или новее (ProtonUp-Qt) или Proton Experimental / Proton-CachyOS в Steam. Если они есть — запустите в Steam любую игру с этим Proton, чтобы Steam поставил его рантайм":
         "No suitable Proton found: install GE-Proton 10 or newer (ProtonUp-Qt), or Proton Experimental / Proton-CachyOS in Steam. If you have them, start any game with that Proton in Steam so that Steam installs its runtime",
@@ -639,8 +647,8 @@ PT_BR = {
     "DLL апскейлера AMD (amd_fidelityfx_upscaler_dx12.dll)": "DLL do upscaler da AMD (amd_fidelityfx_upscaler_dx12.dll)",
     "нет": "nenhum",
     "Эта DLL не подходит": "Esta DLL não serve",
-    "{}: версия {}, модели FSR 4: {}.\n\nbbport повторяет только официальную FSR 4.1.x от AMD (модель v07_fp8_no_scale): например, FSR4_LATEST из OptiScaler или amd_fidelityfx_upscaler_dx12.dll из игры с FSR 4.1. Сборки сообщества (4.0.2b и подобные) устроены иначе и пока не поддерживаются.":
-        "{}: versão {}, modelos do FSR 4: {}.\n\nO bbport reproduz apenas o FSR 4.1.x oficial da AMD (modelo v07_fp8_no_scale): por exemplo, o FSR4_LATEST do OptiScaler ou a amd_fidelityfx_upscaler_dx12.dll de um jogo com FSR 4.1. Builds da comunidade (4.0.2b e similares) têm outra estrutura e ainda não são suportados.",
+    "{}: версия {}, модели FSR 4: {}.\n\nbbglorp повторяет только официальную FSR 4.1.x от AMD (модель v07_fp8_no_scale): например, FSR4_LATEST из OptiScaler или amd_fidelityfx_upscaler_dx12.dll из игры с FSR 4.1. Сборки сообщества (4.0.2b и подобные) устроены иначе и пока не поддерживаются.":
+        "{}: versão {}, modelos do FSR 4: {}.\n\nO bbglorp reproduz apenas o FSR 4.1.x oficial da AMD (modelo v07_fp8_no_scale): por exemplo, o FSR4_LATEST do OptiScaler ou a amd_fidelityfx_upscaler_dx12.dll de um jogo com FSR 4.1. Builds da comunidade (4.0.2b e similares) têm outra estrutura e ainda não são suportados.",
     "Загрузчик не подходит": "O carregador não serve",
     "Загрузчик FidelityFX (amd_fidelityfx_loader_dx12.dll или amd_fidelityfx_dx12.dll)":
         "Carregador do FidelityFX (amd_fidelityfx_loader_dx12.dll ou amd_fidelityfx_dx12.dll)",
@@ -654,8 +662,8 @@ PT_BR = {
     "FSR 4.1.1 не собран": "O FSR 4.1.1 não foi gerado",
     "DLL не подходит: подробности в журнале": "A DLL não serve: detalhes no log",
     "Не хватает программ для сборки: список в журнале": "Faltam programas para a geração: a lista está no log",
-    "Записанные проходы не совпали с тем, что повторяет bbport (другая версия DLL или новая видеокарта?): подробности в журнале":
-        "As passagens gravadas não batem com o que o bbport reproduz (outra versão da DLL ou GPU nova?): detalhes no log",
+    "Записанные проходы не совпали с тем, что повторяет bbglorp (другая версия DLL или новая видеокарта?): подробности в журнале":
+        "As passagens gravadas não batem com o que o bbglorp reproduz (outra versão da DLL ou GPU nova?): detalhes no log",
     "Не найден загрузчик FidelityFX 2.x": "Carregador do FidelityFX 2.x não encontrado",
     "Не найден подходящий Proton: установите GE-Proton 10 или новее (ProtonUp-Qt) или Proton Experimental / Proton-CachyOS в Steam. Если они есть — запустите в Steam любую игру с этим Proton, чтобы Steam поставил его рантайм":
         "Nenhum Proton adequado encontrado: instale o GE-Proton 10 ou mais novo (ProtonUp-Qt), ou o Proton Experimental / Proton-CachyOS na Steam. Se já os tiver, abra qualquer jogo com esse Proton na Steam para que a Steam instale o runtime dele",
@@ -951,8 +959,8 @@ ZH_CN = {
     "DLL апскейлера AMD (amd_fidelityfx_upscaler_dx12.dll)": "AMD 超分辨率 DLL（amd_fidelityfx_upscaler_dx12.dll）",
     "нет": "无",
     "Эта DLL не подходит": "此 DLL 不适用",
-    "{}: версия {}, модели FSR 4: {}.\n\nbbport повторяет только официальную FSR 4.1.x от AMD (модель v07_fp8_no_scale): например, FSR4_LATEST из OptiScaler или amd_fidelityfx_upscaler_dx12.dll из игры с FSR 4.1. Сборки сообщества (4.0.2b и подобные) устроены иначе и пока не поддерживаются.":
-        "{}：版本 {}，FSR 4 模型：{}。\n\nbbport 仅支持复现 AMD 官方的 FSR 4.1.x（v07_fp8_no_scale 模型）：例如 OptiScaler 中的 FSR4_LATEST，或来自支持 FSR 4.1 的游戏的 amd_fidelityfx_upscaler_dx12.dll。社区构建版本（如 4.0.2b 等）结构不同，暂不支持。",
+    "{}: версия {}, модели FSR 4: {}.\n\nbbglorp повторяет только официальную FSR 4.1.x от AMD (модель v07_fp8_no_scale): например, FSR4_LATEST из OptiScaler или amd_fidelityfx_upscaler_dx12.dll из игры с FSR 4.1. Сборки сообщества (4.0.2b и подобные) устроены иначе и пока не поддерживаются.":
+        "{}：版本 {}，FSR 4 模型：{}。\n\nbbglorp 仅支持复现 AMD 官方的 FSR 4.1.x（v07_fp8_no_scale 模型）：例如 OptiScaler 中的 FSR4_LATEST，或来自支持 FSR 4.1 的游戏的 amd_fidelityfx_upscaler_dx12.dll。社区构建版本（如 4.0.2b 等）结构不同，暂不支持。",
     "Загрузчик не подходит": "此加载器不适用",
     "Загрузчик FidelityFX (amd_fidelityfx_loader_dx12.dll или amd_fidelityfx_dx12.dll)":
         "FidelityFX 加载器（amd_fidelityfx_loader_dx12.dll 或 amd_fidelityfx_dx12.dll）",
@@ -966,8 +974,8 @@ ZH_CN = {
     "FSR 4.1.1 не собран": "FSR 4.1.1 尚未构建",
     "DLL не подходит: подробности в журнале": "DLL 不适用：详情见日志",
     "Не хватает программ для сборки: список в журнале": "缺少构建所需的程序：清单见日志",
-    "Записанные проходы не совпали с тем, что повторяет bbport (другая версия DLL или новая видеокарта?): подробности в журнале":
-        "录制的渲染通道与 bbport 复现的内容不一致（可能是 DLL 版本不同，或显卡型号较新？）：详情见日志",
+    "Записанные проходы не совпали с тем, что повторяет bbglorp (другая версия DLL или новая видеокарта?): подробности в журнале":
+        "录制的渲染通道与 bbglorp 复现的内容不一致（可能是 DLL 版本不同，或显卡型号较新？）：详情见日志",
     "Не найден загрузчик FidelityFX 2.x": "未找到 FidelityFX 2.x 加载器",
     "Не найден подходящий Proton: установите GE-Proton 10 или новее (ProtonUp-Qt) или Proton Experimental / Proton-CachyOS в Steam. Если они есть — запустите в Steam любую игру с этим Proton, чтобы Steam поставил его рантайм":
         "未找到合适的 Proton：请安装 GE-Proton 10 或更高版本（可用 ProtonUp-Qt），或在 Steam 中使用 Proton Experimental / Proton-CachyOS。如果已经安装，请在 Steam 中用该 Proton 启动任意游戏，让 Steam 安装它的运行时",
@@ -1300,8 +1308,8 @@ FR_FR = {
     "DLL апскейлера AMD (amd_fidelityfx_upscaler_dx12.dll)": "DLL de l'upscaler AMD (amd_fidelityfx_upscaler_dx12.dll)",
     "нет": "aucune",
     "Эта DLL не подходит": "Cette DLL ne convient pas",
-    "{}: версия {}, модели FSR 4: {}.\n\nbbport повторяет только официальную FSR 4.1.x от AMD (модель v07_fp8_no_scale): например, FSR4_LATEST из OptiScaler или amd_fidelityfx_upscaler_dx12.dll из игры с FSR 4.1. Сборки сообщества (4.0.2b и подобные) устроены иначе и пока не поддерживаются.":
-        "{} : version {}, modèles FSR 4 : {}.\n\nbbport ne reproduit que la FSR 4.1.x officielle d'AMD (modèle v07_fp8_no_scale) : par exemple FSR4_LATEST d'OptiScaler, ou amd_fidelityfx_upscaler_dx12.dll d'un jeu avec FSR 4.1. Les builds de la communauté (4.0.2b et similaires) sont structurés différemment et ne sont pas encore pris en charge.",
+    "{}: версия {}, модели FSR 4: {}.\n\nbbglorp повторяет только официальную FSR 4.1.x от AMD (модель v07_fp8_no_scale): например, FSR4_LATEST из OptiScaler или amd_fidelityfx_upscaler_dx12.dll из игры с FSR 4.1. Сборки сообщества (4.0.2b и подобные) устроены иначе и пока не поддерживаются.":
+        "{} : version {}, modèles FSR 4 : {}.\n\nbbglorp ne reproduit que la FSR 4.1.x officielle d'AMD (modèle v07_fp8_no_scale) : par exemple FSR4_LATEST d'OptiScaler, ou amd_fidelityfx_upscaler_dx12.dll d'un jeu avec FSR 4.1. Les builds de la communauté (4.0.2b et similaires) sont structurés différemment et ne sont pas encore pris en charge.",
     "Загрузчик не подходит": "Le chargeur ne convient pas",
     "Загрузчик FidelityFX (amd_fidelityfx_loader_dx12.dll или amd_fidelityfx_dx12.dll)":
         "Chargeur FidelityFX (amd_fidelityfx_loader_dx12.dll ou amd_fidelityfx_dx12.dll)",
@@ -1315,8 +1323,8 @@ FR_FR = {
     "FSR 4.1.1 не собран": "FSR 4.1.1 n'a pas été construit",
     "DLL не подходит: подробности в журнале": "La DLL ne convient pas : détails dans le journal",
     "Не хватает программ для сборки: список в журнале": "Il manque des outils pour la construction : la liste est dans le journal",
-    "Записанные проходы не совпали с тем, что повторяет bbport (другая версия DLL или новая видеокарта?): подробности в журнале":
-        "Les passes enregistrées ne correspondent pas à ce que reproduit bbport (autre version de la DLL, ou nouvelle carte graphique ?) : détails dans le journal",
+    "Записанные проходы не совпали с тем, что повторяет bbglorp (другая версия DLL или новая видеокарта?): подробности в журнале":
+        "Les passes enregistrées ne correspondent pas à ce que reproduit bbglorp (autre version de la DLL, ou nouvelle carte graphique ?) : détails dans le journal",
     "Не найден загрузчик FidelityFX 2.x": "Chargeur FidelityFX 2.x introuvable",
     "Не найден подходящий Proton: установите GE-Proton 10 или новее (ProtonUp-Qt) или Proton Experimental / Proton-CachyOS в Steam. Если они есть — запустите в Steam любую игру с этим Proton, чтобы Steam поставил его рантайм":
         "Aucun Proton adapté trouvé : installez GE-Proton 10 ou plus récent (ProtonUp-Qt), ou Proton Experimental / Proton-CachyOS dans Steam. S'ils sont déjà installés, lancez n'importe quel jeu avec ce Proton dans Steam pour que Steam installe son runtime",

@@ -74,7 +74,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           git fetch --depth=1 origin 37240c52839d1d7511c14f26b401e84fee0d1b32
-          git diff --exit-code 37240c52839d1d7511c14f26b401e84fee0d1b32 HEAD -- . ':!packaging/windows/build-dlss.ps1' ':!.github/workflows/windows.yml'
+          git diff --exit-code 37240c52839d1d7511c14f26b401e84fee0d1b32 HEAD -- . ':!packaging/windows/build-dlss.ps1' ':!packaging/verify-dlss.py' ':!.github/workflows/windows.yml'
           gh api repos/JOmega321/bloodborne_pc/actions/artifacts/12914746688/zip > native-windows.zip
           python - <<'PYVERIFY'
           import hashlib, zipfile

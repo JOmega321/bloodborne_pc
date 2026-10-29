@@ -32,7 +32,7 @@ for file in [bridge, *libraries]:
     if file in libraries and file.stat().st_size < 1_000_000:
         raise SystemExit(f'NVIDIA runtime is unexpectedly small (possibly a Git LFS pointer): {file}')
 license_file = license_dir / 'NVIDIA-DLSS-LICENSE.txt'
-if not license_file.is_file() or 'NVIDIA' not in license_file.read_text():
+if not license_file.is_file() or 'NVIDIA' not in license_file.read_text(encoding='utf-8'):
     raise SystemExit('Missing NVIDIA redistribution license')
 library = ctypes.CDLL(str(bridge))
 library.BbDlssGetApi.argtypes = []

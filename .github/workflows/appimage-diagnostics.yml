@@ -1,0 +1,52 @@
+name: Classify AppImage startup failure
+on:
+  push:
+    branches: [appimage-startup-diagnostics]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  classify:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: appimage-failure-logs
+          run-id: 40818605647
+          github-token: ${{ github.token }}
+          path: diagnostics
+      - name: Report fixed error categories without disclosing log contents
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          categories = {
+              'normal_help': ['Usage:'],
+              'normal_missing_game': ['choose the game folder'],
+              'namespace_denied': ['cannot unshare', 'cannot mount', 'Operation not permitted'],
+              'missing_shared_library': ['error while loading shared libraries'],
+              'missing_command_or_file': ['command not found', 'No such file or directory', 'Failed to execute child process'],
+              'python_import_error': ['ModuleNotFoundError', 'ImportError'],
+              'display_error': ['cannot open display', 'Failed to open display', 'Could not connect to display'],
+              'x11_destroy_error': ['unexpectedly destroyed', 'BadWindow', 'BadDrawable'],
+              'gdk_error': ['Gdk-ERROR', 'Gdk-WARNING'],
+              'dbus_error': ['Failed to execute dbus', 'Failed to connect to session bus'],
+              'graphics_loader_error': ['libEGL warning', 'VK_ERROR', 'MESA-LOADER'],
+              'libX11': ['libX11.so.6'],
+              'libXext': ['libXext.so.6'],
+              'libXau': ['libXau.so.6'],
+              'libxcb': ['libxcb.so.1'],
+              'libGL': ['libGL.so.1'],
+              'libEGL': ['libEGL.so.1'],
+              'girepository': ['libgirepository'],
+              'gdk_pixbuf': ['gdk-pixbuf'],
+          }
+          for name in ('appimage-help.log', 'appimage-play.log', 'appimage-gui.log'):
+              p = Path('diagnostics/dist') / name
+              result = {'test_log': name, 'present': p.is_file()}
+              if p.is_file():
+                  s = p.read_text(errors='replace')
+                  result['categories'] = {k: any(v in s for v in values) for k, values in categories.items()}
+              print(json.dumps(result, sort_keys=True))
+          PY

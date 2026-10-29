@@ -73,7 +73,7 @@ jobs:
         shell: msys2 {0}
         run: |
           pacman -Q > out/windows/current-packages.txt
-          diff -u out/windows/msys2-packages.txt out/windows/current-packages.txt
+          python -c "from pathlib import Path; assert Path('out/windows/msys2-packages.txt').read_text().splitlines() == Path('out/windows/current-packages.txt').read_text().splitlines(), 'Native build and runtime package versions differ'"
       - name: Preserve native build
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:

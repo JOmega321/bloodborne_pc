@@ -9,6 +9,7 @@ otherwise).
 import os
 
 EN = {
+    "Качество текстур": "Texture quality",
     "Качество изображения": "Image quality",
     "Библиотеки AMD и NVIDIA": "AMD and NVIDIA libraries",
     "Свои файлы AMD и NVIDIA: порт их не распространяет": "Your own AMD and NVIDIA files: the port does not ship them",

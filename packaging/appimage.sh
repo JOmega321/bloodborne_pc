@@ -33,7 +33,7 @@ needed_dirs() {
 } > packaging/runtime-paths.nix
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-(cd "$work" && nix bundle --impure --bundler github:ralismark/nix-appimage \
+(cd "$work" && nix bundle --impure --bundler github:ralismark/nix-appimage/7946addbc0d97e358a6d7aefe5e82310f0fe6b18 \
     --expr "import $root/packaging {}")
 mkdir -p dist
 install -m755 "$work/bbport.AppImage" dist/Bloodborne-bbport-x86_64.AppImage

@@ -1,0 +1,76 @@
+name: Linux AppImage
+on:
+  push:
+    branches: [english-texture-quality-appimage]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: appimage-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  appimage:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 180
+    env:
+      NIX_PATH: nixpkgs=https://github.com/NixOS/nixpkgs/archive/58deea654ec5dd0644f31c840a07c29fa0592528.tar.gz
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          submodules: recursive
+      - name: Install display test tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth xdotool dbus-x11 imagemagick libfuse2 desktop-file-utils
+      - uses: DeterminateSystems/nix-installer-action@9383ce2bf08796b65508822f5982f49151badc4e
+        with:
+          extra-conf: |
+            experimental-features = nix-command flakes
+            max-jobs = 2
+            cores = 2
+      - name: Check launcher translation
+        run: |
+          python3 - <<'PY'
+          import sys
+          sys.path.insert(0, 'launcher')
+          from bbport_i18n import set_language, tr
+          set_language('en')
+          assert tr('Качество текстур') == 'Texture quality'
+          set_language('ru')
+          assert tr('Качество текстур') == 'Качество текстур'
+          PY
+          python3 -m compileall -q launcher
+      - name: Build native application and FSR 4 v07 assets
+        run: |
+          mkdir -p dist
+          nix-shell --run 'bash build.sh && bash tools/fetch_fsr4_assets.sh'
+          git rev-parse HEAD > dist/source-commit.txt
+          git submodule status --recursive > dist/submodules.txt
+          nix-shell --run 'gcc --version; cmake --version; pkg-config --modversion sdl3 vulkan' > dist/toolchain.txt
+          sha256sum out/bb-probe out/gpu/libbbgpu.so > dist/native.sha256
+      - name: Build AppImage with upstream Nix packaging
+        run: |
+          bash packaging/appimage.sh
+          stamp=$(TZ=America/New_York date +%m%d%y)
+          name="Bloodborne-bbport-x86_64-${stamp}v${GITHUB_RUN_NUMBER}.AppImage"
+          mv dist/Bloodborne-bbport-x86_64.AppImage "dist/$name"
+          echo "APPIMAGE_FILE=$PWD/dist/$name" >> "$GITHUB_ENV"
+          (cd dist && sha256sum "$name" > "$name.sha256")
+          nix-store -qR "$(readlink -f out/nix-roots/bbport)" > dist/runtime-closure.txt
+      - name: Check final AppImage CLI and launcher startup
+        run: bash packaging/verify-appimage.sh "$APPIMAGE_FILE"
+      - name: Upload verified AppImage
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: Bloodborne-bbport-AppImage-x86_64
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: appimage-failure-logs
+          path: |
+            out/*log
+            dist/*log

@@ -1,0 +1,124 @@
+name: Verified AppImage packaging
+on:
+  push:
+    branches: [english-texture-quality-appimage-verified]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  appimage:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 150
+    env:
+      NIX_PATH: nixpkgs=https://github.com/NixOS/nixpkgs/archive/58deea654ec5dd0644f31c840a07c29fa0592528.tar.gz
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - name: Install real X11 desktop test tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth xdotool wmctrl openbox dbus-x11 imagemagick libfuse2 desktop-file-utils
+      - uses: DeterminateSystems/nix-installer-action@9383ce2bf08796b65508822f5982f49151badc4e
+        with:
+          extra-conf: |
+            experimental-features = nix-command flakes
+            max-jobs = 2
+            cores = 2
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: native-build-x86_64
+          run-id: 40818605647
+          github-token: ${{ github.token }}
+          path: _native
+      - name: Verify preserved native build identity and unchanged build inputs
+        run: |
+          native_sha=$(cat _native/dist/source-commit.txt)
+          test "$native_sha" = 9447ed31e43f602b1507ebc3b10c122e091e9969
+          git diff --exit-code "$native_sha" HEAD -- . \
+            ':(exclude).github/workflows/appimage-repack.yml' \
+            ':(exclude)packaging/verify-appimage.sh'
+          (cd _native && sha256sum -c native-stage.tar.gz.sha256)
+          tar -xzf _native/native-stage.tar.gz
+          sha256sum -c _native/dist/native.sha256
+          mkdir -p dist
+          cp _native/dist/source-commit.txt dist/native-source-commit.txt
+          cp _native/dist/submodules.txt dist/native-submodules.txt
+          cp _native/dist/toolchain.txt dist/native-toolchain.txt
+          cp _native/dist/native.sha256 dist/
+          git rev-parse HEAD > dist/source-commit.txt
+          bash -n packaging/verify-appimage.sh
+          python3 - <<'PY'
+          import sys
+          sys.path.insert(0, 'launcher')
+          from bbport_i18n import set_language, tr
+          set_language('en')
+          assert tr('Качество текстур') == 'Texture quality'
+          PY
+      - name: Restore pinned native runtime dependencies and regenerate pinned FSR assets
+        run: |
+          nix-shell --run 'bash tools/fetch_fsr4_assets.sh'
+          nix-shell --run 'gcc --version; cmake --version; pkg-config --modversion sdl3 vulkan' > dist/toolchain.txt
+          cmp dist/native-toolchain.txt dist/toolchain.txt
+      - name: Build AppImage using the verified native binaries
+        run: |
+          bash packaging/appimage.sh
+          stamp=$(TZ=America/New_York date +%m%d%y)
+          name="Bloodborne-bbport-x86_64-${stamp}v${GITHUB_RUN_NUMBER}.AppImage"
+          mv dist/Bloodborne-bbport-x86_64.AppImage "dist/$name"
+          echo "APPIMAGE_FILE=$PWD/dist/$name" >> "$GITHUB_ENV"
+          (cd dist && sha256sum "$name" > "$name.sha256")
+          nix-store -qR "$(readlink -f out/nix-roots/bbport)" > dist/runtime-closure.txt
+      - name: Preserve assembled image before startup validation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: appimage-candidate-x86_64
+          path: |
+            dist/*.AppImage
+            dist/*.sha256
+            dist/*commit.txt
+            dist/*toolchain.txt
+            dist/*submodules.txt
+            dist/runtime-closure.txt
+          if-no-files-found: error
+          retention-days: 7
+      - name: Verify final CLI and real launcher startup and graceful exit
+        run: bash packaging/verify-appimage.sh "$APPIMAGE_FILE"
+      - name: Upload verified AppImage
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: Bloodborne-bbport-AppImage-x86_64
+          path: |
+            dist/*.AppImage
+            dist/*.sha256
+            dist/*commit.txt
+            dist/*toolchain.txt
+            dist/*submodules.txt
+            dist/runtime-closure.txt
+            dist/launcher-english.png
+          if-no-files-found: error
+          retention-days: 30
+      - name: Report only fixed diagnostic categories if startup validation fails
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          patterns = {
+              'x11_destroy_error': ['unexpectedly destroyed', 'BadWindow', 'BadDrawable'],
+              'missing_library': ['error while loading shared libraries'],
+              'namespace_denied': ['cannot unshare', 'Operation not permitted'],
+              'graphics_error': ['Gdk-ERROR', 'VK_ERROR', 'MESA-LOADER'],
+              'normal_help': ['Usage:'],
+              'normal_missing_game': ['choose the game folder'],
+          }
+          for name in ('appimage-help.log', 'appimage-play.log', 'appimage-gui.log'):
+              p = Path('dist') / name
+              if p.is_file():
+                  s = p.read_text(errors='replace')
+                  print(json.dumps({'test': name, 'categories': {
+                      k: any(v in s for v in values) for k, values in patterns.items()
+                  }}))
+          PY

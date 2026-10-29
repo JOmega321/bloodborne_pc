@@ -12,6 +12,7 @@ jobs:
     timeout-minutes: 180
     env:
       CCACHE_DIR: C:/ccache
+      CLANG64_BIN: D:/a/_temp/msys64/clang64/bin
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:

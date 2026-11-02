@@ -1,7 +1,7 @@
 name: Windows x64 package
 on:
   push:
-    branches: [bbglorp-build]
+    branches: [bbglorp-windows-build]
   workflow_dispatch:
 permissions:
   contents: read
@@ -17,6 +17,10 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           submodules: recursive
+      - name: Check launcher and online regressions
+        run: |
+          python -m unittest discover -s tests -p test_online_status.py
+          python -m unittest discover -s tests -p test_launcher_gpu.py
       - name: Fetch pinned NVIDIA DLSS SDK
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:

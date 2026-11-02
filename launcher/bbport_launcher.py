@@ -916,7 +916,8 @@ class LauncherWindow(ContentPages, OnlinePage, TrophiesPage, LogPage, UpscalerFi
             self.stop_game()
             return
         npid = self.npid_row.get_text().strip()
-        if online_module() and not self.online_row.get_active() and npid and hasattr(Adw, "AlertDialog"):
+        if (not self.skip_network_row.get_active() and online_module()
+                and not self.online_row.get_active() and npid and hasattr(Adw, "AlertDialog")):
             dialog = Adw.AlertDialog(heading="Bloodborne", body=tr(
                 "Учётная запись для игры онлайн указана, но «Играть онлайн» выключено"))
             dialog.add_response("cancel", tr("Отмена"))

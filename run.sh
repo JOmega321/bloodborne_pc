@@ -280,6 +280,7 @@ if [[ ${BB_ONLINE:-0} == 1 && -f scripts/online.py ]]; then
             else
                 echo "Co-op: a game server answers on 127.0.0.1:20443 already: used"
             fi
+            "$PYTHON" scripts/online.py bbsc-wait || exit 1
             export BB_COMMUNITY_SERVER=http://127.0.0.1
         fi
     fi

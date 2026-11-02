@@ -65,5 +65,28 @@ class LauncherGpuTests(unittest.TestCase):
             self.assertEqual(launcher.game_environment(self.settings)["BB_GPU_ID"], "1")
 
 
+class LauncherOnlineTests(unittest.TestCase):
+    def test_offline_skip_starts_without_credentials_dialog(self):
+        window = mock.Mock(process=None)
+        window.npid_row.get_text.return_value = 'saved-account'
+        window.online_row.get_active.return_value = False
+        window.skip_network_row.get_active.return_value = True
+        with mock.patch.object(launcher, 'online_module', return_value=True), \
+                mock.patch.object(launcher.Adw, 'AlertDialog') as dialog:
+            launcher.LauncherWindow.on_launch(window, None)
+        dialog.assert_not_called()
+        window.start_game.assert_called_once_with()
+        window.online_row.set_active.assert_not_called()
+
+    def test_explicit_online_launch_never_applies_offline_patch(self):
+        settings = dict(launcher.DEFAULTS, game_dir='/games/CUSA03173', online=True,
+                        online_bbsc=True, skip_network_choice=True)
+        with mock.patch.object(sys.modules['bbport_launcher_common'], 'online_module', return_value=True):
+            env = launcher.game_environment(settings)
+        self.assertEqual(env['BB_ONLINE'], '1')
+        self.assertEqual(env['BB_BBSC'], '1')
+        self.assertEqual(env['BB_SKIP_NETWORK_CHOICE'], '0')
+
+
 if __name__ == "__main__":
     unittest.main()

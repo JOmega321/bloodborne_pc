@@ -20,6 +20,7 @@ summon service) and prints its path for SHADPS4_HTTP_HOST_OVERRIDES_JSON. A play
 other addresses puts them in DIR/host_overrides.custom.json, which is then used as it is.
 """
 import argparse
+import base64
 import json
 from pathlib import Path
 import os
@@ -28,6 +29,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+import xml.etree.ElementTree as ET
 
 COMMUNITY_SERVER = 'http://play.seamlesshunt.com'
 SHADNET_SERVER = 'play.seamlesshunt.com:31313'
@@ -113,20 +115,42 @@ def write_overrides(user_dir, community, webapi, plain=False):
     return path
 
 
+def game_status(community, timeout=5):
+    """Require the base64 XML the game consumes, not just an open TCP port or an HTTP error."""
+    community = community_address(community)
+    request = urllib.request.Request(f'{community}:20443/bb-eu/ss.info',
+                                     headers={'User-Agent': 'Bloodborne/01.09'})
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as reply:
+            body = reply.read(262145)
+        if len(body) > 262144:
+            raise ValueError('ss.info is too large')
+        xml = base64.b64decode(body.strip(), validate=True).decode('utf-8')
+        root = ET.fromstring('<root>' + xml + '</root>')
+        if root.findtext('ss') is None or not root.findtext('gameurl2/api_Login'):
+            raise ValueError('ss.info has no game status or login address')
+        return True, ''
+    except (OSError, ValueError, ET.ParseError) as error:
+        return False, str(error)
+
+
+def wait_local_server(timeout=5):
+    """Wait until the bundled server can answer the game's first status request."""
+    deadline = time.monotonic() + timeout
+    detail = 'not ready'
+    while time.monotonic() < deadline:
+        ok, detail = game_status('http://127.0.0.1', timeout=0.5)
+        if ok:
+            return
+        time.sleep(0.1)
+    raise RuntimeError(f'local BBSC game server did not become ready: {detail}')
+
+
 def check(server, webapi, community):
     """(name, address, ok, detail) for the game server, the shadNet server and its WebAPI."""
     results = []
-    try:
-        game_url = community if (':20443' in community) else f"{community.rstrip('/')}:20443"
-        req = urllib.request.Request(f'{game_url}/bb-eu/ss.info',
-                                     headers={'User-Agent': 'Bloodborne/01.09'})
-        with urllib.request.urlopen(req, timeout=6) as reply:
-            reply.read(64)
-        results.append(('game', community, True, ''))
-    except urllib.error.HTTPError:
-        results.append(('game', community, True, ''))  # the server answered
-    except (OSError, ValueError) as error:
-        results.append(('game', community, False, str(error)))
+    ok, detail = game_status(community, timeout=6)
+    results.append(('game', community, ok, detail))
     host, _sep, port = server.rpartition(':')
     try:
         socket.create_connection((host or server, int(port or 31313)), timeout=4).close()
@@ -261,26 +285,12 @@ def bbsc_local_server():
     comm_host = community.split('://', 1)[1].split(':')[0]
     if comm_host in ('127.0.0.1', 'localhost'):
         return ''  # pointed at a local one already
-    try:
-        game_url = community if (':20443' in community) else f"{community.rstrip('/')}:20443"
-        req = urllib.request.Request(f'{game_url}/bb-eu/ss.info',
-                                     headers={'User-Agent': 'Bloodborne/01.09'})
-        with urllib.request.urlopen(req, timeout=5) as reply:
-            reply.read(64)
+    ok, detail = game_status(community)
+    if ok:
         return ''
-    except urllib.error.HTTPError:
-        # An HTTP status reply (even 403 or 401) confirms the server is reachable and running.
-        return ''
-    except (OSError, ValueError) as error:
-        try:
-            # Fallback: check if port 20443 is accepting TCP connections
-            socket.create_connection((comm_host, 20443), timeout=3).close()
-            return ''
-        except (OSError, ValueError):
-            pass
-        print(f'Co-op: {community}:20443 does not answer ({error}): BBSC game server on this PC',
-              file=sys.stderr)
-        return host
+    print(f'Co-op: {community}:20443 has no usable game status ({detail}): BBSC game server on this PC',
+          file=sys.stderr)
+    return host
 
 
 def main():
@@ -295,7 +305,14 @@ def main():
     sub.add_parser('thd-check')
     sub.add_parser('thd-signin')
     sub.add_parser('bbsc-local')
+    sub.add_parser('bbsc-wait')
     a = parser.parse_args()
+    if a.command == 'bbsc-wait':
+        try:
+            wait_local_server()
+        except RuntimeError as error:
+            parser.exit(1, f'Co-op: {error}\n')
+        return
     server = os.environ.get('BB_SHADNET_SERVER') or SHADNET_SERVER
     community = community_address(os.environ.get('BB_COMMUNITY_SERVER'))
     webapi = webapi_setting(os.environ.get('BB_SHADNET_WEBAPI'), server, community)

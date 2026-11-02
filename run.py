@@ -77,7 +77,7 @@ def online(env, user, bindir):
     module online/bbnet20.dll (BB_NET_MODULE overrides it) and the addresses of the pool: Seamless
     Hunt (the shadNet server and its WebAPI, the game server in host_overrides.json) or The
     Hunter's Dream (BB_NET_BACKEND=thd: the account from the launcher's Discord sign-in, its
-    overrides). BBSC's local game server fallback is Linux-only for now."""
+    overrides). Both platforms support BBSC's local game server fallback."""
     if env.get('BB_ONLINE') != '1':
         return
     module = Path(env.get('BB_NET_MODULE') or PACKAGE_DIR / 'online' / 'bbnet20.dll')
@@ -162,6 +162,12 @@ def bbsc_local_server(env, user):
         finally:
             console.close()
         log(f'Co-op: BBSC game server on 127.0.0.1:20443 (summons -> {shadnet}:31315)')
+    from online import wait_local_server
+    try:
+        wait_local_server()
+    except RuntimeError:
+        stop_bbsc_local_server()
+        raise
     env['BB_COMMUNITY_SERVER'] = 'http://127.0.0.1'
     os.environ['BB_COMMUNITY_SERVER'] = env['BB_COMMUNITY_SERVER']
 

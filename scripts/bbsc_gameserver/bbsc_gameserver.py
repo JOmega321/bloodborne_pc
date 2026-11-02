@@ -38,6 +38,7 @@ import threading
 import time
 import traceback
 import uuid
+import xml.etree.ElementTree as ET
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import bbhost_service
@@ -92,6 +93,38 @@ def build_ss_info(local=False, quiet=False, bbhost=False):
         print = real_print
 
 
+def complete_region_sections(xml):
+    """Publish the same settings for US (1), EU (2), JP (3) and Asia (4).
+
+    An EU-only ss.info is valid XML and HTTP, but other game regions reject it before login.
+    Expand after retuning so each region also receives the requested timers and playlog policy.
+    Keep the original XML spelling, including explicitly closed empty language elements.
+    """
+    for section in ('msg2', 'BetaTestWebUrl2'):
+        pattern = r'(<{0}>)(.*?)(</{0}>)'.format(section)
+        match = re.search(pattern, xml, re.S)
+        if match:
+            body = match.group(2)
+            first = re.search(r'<lang\d+>(.*?)</lang\d+>', body, re.S)
+            default = first.group(1) if section != 'msg2' and first else ''
+            missing = ''.join('<lang{0}>{1}</lang{0}>\n'.format(n, default)
+                              for n in range(22) if '<lang{}>'.format(n) not in body)
+            xml = xml[:match.start(3)] + missing + xml[match.start(3):]
+    root = ET.fromstring('<root>' + xml + '</root>')
+    names = {node.tag for node in root}
+    additions = []
+    for node in root:
+        if not node.tag.endswith('2'):
+            continue
+        name = node.tag
+        body = re.search(r'<{0}>(.*?)</{0}>'.format(re.escape(name)), xml, re.S).group(1)
+        for region in (1, 3, 4):
+            tag = name[:-1] + str(region)
+            if tag not in names:
+                additions.append('<{0}>{1}</{0}>'.format(tag, body))
+    return xml + '\n' + '\n'.join(additions)
+
+
 def _build_ss_info(local, bbhost=False):
     with open(TEMPLATE, "r", encoding="utf-8") as handle:
         xml = handle.read().strip()
@@ -133,12 +166,12 @@ def _build_ss_info(local, bbhost=False):
     #    bb-playlog-test.s3.amazonaws.com with no connect timeout set - an outside server we do
     #    not control, on the game's main thread. Nothing reads those logs any more.
     if ARGS.no_playlog:
-        xml, count = re.subn(r"<(Playlog[A-Za-z_]*2)>1</\1>", r"<\1>0</\1>", xml)
+        xml, count = re.subn(r"<(Playlog[A-Za-z_0-9]*2)>1</\1>", r"<\1>0</\1>", xml)
         print("  play logs        -> {} disabled (no more S3 uploads)".format(count))
 
     if "{YOUR" in xml:
         print("  WARNING: an unfilled placeholder is still in the XML")
-    return base64.b64encode(xml.encode("utf-8"))
+    return base64.b64encode(complete_region_sections(xml).encode("utf-8"))
 
 def ok(message_id, **extra):
     body = {"ResKind": 0, "MessageId": message_id}

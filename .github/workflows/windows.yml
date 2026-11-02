@@ -81,7 +81,8 @@ jobs:
           git diff --exit-code 37240c52839d1d7511c14f26b401e84fee0d1b32 HEAD -- . ':!packaging/windows/build-dlss.ps1' ':!packaging/verify-dlss.py' ':!.github/workflows/windows.yml' \
             ':!launcher/bbport_launcher.py' ':!launcher/bbport_launcher_common.py' \
             ':!run.py' ':!run.sh' ':!scripts/online.py' \
-            ':!tests/test_launcher_gpu.py' ':!tests/test_online_status.py'
+            ':!tests/test_launcher_gpu.py' ':!tests/test_online_status.py' \
+            ':!scripts/bbsc_gameserver/bbsc_gameserver.py' ':!docs/BBSC.md' ':!packaging/verify-online.py'
           gh api repos/JOmega321/bloodborne_pc/actions/artifacts/12914746688/zip > native-windows.zip
           python - <<'PYVERIFY'
           import hashlib, zipfile
@@ -91,6 +92,23 @@ jobs:
           with zipfile.ZipFile(archive) as z:
               z.extractall('.')
           PYVERIFY
+      - name: Check whether cached native runtime versions still match
+        id: native-cache
+        shell: msys2 {0}
+        run: |
+          pacman -Q > out/windows/current-packages.txt
+          python - <<'PYMATCH'
+          import os
+          from pathlib import Path
+          same = Path('out/windows/msys2-packages.txt').read_text().splitlines() == Path('out/windows/current-packages.txt').read_text().splitlines()
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('rebuild=' + ('false' if same else 'true') + '\n')
+          print('Verified cached native runtime versions match.' if same else 'Runtime package versions changed: rebuilding native code before packaging.')
+          PYMATCH
+      - name: Rebuild native application for changed MSYS2 packages
+        if: steps.native-cache.outputs.rebuild == 'true'
+        shell: msys2 {0}
+        run: bash packaging/windows/build-native.sh
       - name: Verify matching native runtime libraries
         shell: msys2 {0}
         run: |
@@ -117,6 +135,7 @@ jobs:
           if (!(Test-Path $env:CLANG64_BIN)) { throw 'Missing CLANG64 runtime' }
           python -m pip install pyinstaller==6.16.0 pefile==2023.2.7
           python packaging/windows/package-native.py
+          python packaging/verify-online.py dist/bbglorp-windows --runner dist/bbglorp-windows/bbport-run.exe
       - name: Preserve package candidate
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:

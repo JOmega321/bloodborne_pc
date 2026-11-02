@@ -125,10 +125,17 @@ def game_status(community, timeout=5):
             body = reply.read(262145)
         if len(body) > 262144:
             raise ValueError('ss.info is too large')
-        xml = base64.b64decode(body.strip(), validate=True).decode('utf-8')
+        xml = base64.b64decode(b''.join(body.split()), validate=True).decode('utf-8')
         root = ET.fromstring('<root>' + xml + '</root>')
-        if root.findtext('ss') is None or not root.findtext('gameurl2/api_Login'):
-            raise ValueError('ss.info has no game status or login address')
+        if root.findtext('ss') is None:
+            raise ValueError('ss.info has no game status')
+        # Bloodborne reads sections by its sell region: US 1, EU 2, JP 3, Asia 4.
+        # Seamless Hunt can answer HTTP 200 with only region 2: other copies then report
+        # "Failed to resolve Bloodborne server status" despite a successful shadNet login.
+        missing = [str(n) for n in (1, 2, 3, 4)
+                   if not root.findtext(f'gameurl{n}/api_Login')]
+        if missing:
+            raise ValueError('ss.info is missing game-region sections: ' + ', '.join(missing))
         return True, ''
     except (OSError, ValueError, ET.ParseError) as error:
         return False, str(error)

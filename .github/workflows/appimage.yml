@@ -111,6 +111,7 @@ jobs:
           nix-store -qR "$(readlink -f out/nix-roots/bbport)" > dist/runtime-closure.txt
           package=$(readlink -f out/nix-roots/bbport)
           nix-shell --run "python3 packaging/verify-dlss.py '$package/share/bbport/bin' --license-dir '$package/share/bbport'"
+          nix-shell --run "python3 packaging/verify-online.py '$package/share/bbport'"
       - name: Check final AppImage CLI and launcher startup
         run: bash packaging/verify-appimage.sh "$APPIMAGE_FILE"
       - name: Upload verified AppImage

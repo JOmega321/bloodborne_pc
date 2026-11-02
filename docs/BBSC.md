@@ -27,6 +27,14 @@ Messages and bloodstains are then this PC's only. It stops with the game; its lo
 does not answer within 5 s. (BBSC's own `BBSC_RELAY` is for the TCP relay in its Windows DLL; the
 port's relay is the UDP one on port 3478 of the shadNet server.)
 
+bbglorp also uses that fallback if the public status response is invalid or lacks the game's
+regional sections. A successful shadNet login is separate from the game's server-status step:
+an EU-only `gameurl2` response can produce "Failed to resolve Bloodborne server status" on
+other game regions, leaving the Kin Bell disabled as offline. The bundled server supplies the
+same status, URLs and timers for US (1), EU (2), JP (3) and Asia (4), with every language entry.
+The launcher waits for its status response before starting the game. Summons still use the
+shared shadNet WebAPI; messages and bloodstains are local while the fallback is active.
+
 Environment: `BB_ONLINE=1 BB_BBSC=1` (what the launcher sets). BBSC's own switches
 (`SHADPS4_BBSC_*`, `SHADPS4_BLOODBORNE_*`, see `gpu/bbnet20/bbsc/core/bbsc_persistence.h`) work as
 in BBSC: most features are on by default, `=0` turns one off.

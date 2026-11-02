@@ -96,6 +96,7 @@ jobs:
           if (!(Test-Path $env:CLANG64_BIN)) { throw 'Missing CLANG64 runtime' }
           python -m pip install pyinstaller==6.16.0 pefile==2023.2.7
           python packaging/windows/package-native.py
+          python packaging/verify-online.py dist/bbglorp-windows --runner dist/bbglorp-windows/bbport-run.exe
       - name: Preserve package candidate
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:

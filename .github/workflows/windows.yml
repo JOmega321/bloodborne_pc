@@ -77,18 +77,18 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          git fetch --depth=1 origin 37240c52839d1d7511c14f26b401e84fee0d1b32
-          git diff --exit-code 37240c52839d1d7511c14f26b401e84fee0d1b32 HEAD -- . ':!packaging/windows/build-dlss.ps1' ':!packaging/verify-dlss.py' ':!.github/workflows/windows.yml' \
+          git fetch --depth=1 origin f302274ca04f8f745244622d6a7ea847d51f27bf
+          git diff --exit-code f302274ca04f8f745244622d6a7ea847d51f27bf HEAD -- . ':!packaging/windows/build-dlss.ps1' ':!packaging/verify-dlss.py' ':!.github/workflows/windows.yml' \
             ':!launcher/bbport_launcher.py' ':!launcher/bbport_launcher_common.py' \
             ':!run.py' ':!run.sh' ':!scripts/online.py' \
             ':!tests/test_launcher_gpu.py' ':!tests/test_online_status.py' \
             ':!scripts/bbsc_gameserver/bbsc_gameserver.py' ':!docs/BBSC.md' ':!packaging/verify-online.py'
-          gh api repos/JOmega321/bloodborne_pc/actions/artifacts/12914746688/zip > native-windows.zip
+          gh api repos/JOmega321/bloodborne_pc/actions/artifacts/13178559529/zip > native-windows.zip
           python - <<'PYVERIFY'
           import hashlib, zipfile
           from pathlib import Path
           archive = Path('native-windows.zip')
-          assert hashlib.sha256(archive.read_bytes()).hexdigest() == '6f1f10eb55d286605c6f8e66b7323df8cfa0a85a7d23397cb027b698b8e2de28', 'Native artifact checksum mismatch'
+          assert hashlib.sha256(archive.read_bytes()).hexdigest() == 'c94ee99e746a3439b33116592fc6763bdcd2ca8901cc2f4be0a1512291e731ea', 'Native artifact checksum mismatch'
           with zipfile.ZipFile(archive) as z:
               z.extractall('.')
           PYVERIFY

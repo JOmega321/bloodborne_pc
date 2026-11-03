@@ -61,3 +61,66 @@ try {
     if (!$p.HasExited) { $p.Kill() }
 }
 Write-Host 'PASS: native DLL startup, frozen Python runner, missing-game error, WPF English texture label, normal close, saved settings, paths containing spaces.'
+
+# Exercise the actual WPF hosting buttons through UI Automation, in the copied package and
+# external state above. No game files, public server, or user accounts are involved.
+$env:BB_LAUNCHER_SECTION = 'online'
+$p = Start-Process (Join-Path $package 'bbglorp.exe') -WorkingDirectory $package -PassThru
+function Find-HostControl([string]$name) {
+    $condition = [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty, $name)
+    return $window.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $condition)
+}
+function Wait-HostControl([string]$name) {
+    for ($i=0; $i -lt 60; $i++) {
+        if ($p.HasExited) { throw 'Launcher exited during private host test' }
+        $element = Find-HostControl $name
+        if ($element) { return $element }
+        Start-Sleep -Milliseconds 500
+    }
+    throw "Private host UI did not reach: $name"
+}
+function Invoke-HostControl([string]$name) {
+    $element = Wait-HostControl $name
+    if (!$element.Current.IsEnabled) { throw "Private host control is disabled: $name" }
+    $pattern = $element.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
+    $pattern.Invoke()
+}
+function Assert-HostPortsClosed {
+    foreach ($port in @(31313,31315,20443,20444)) {
+        $client = [System.Net.Sockets.TcpClient]::new()
+        try {
+            $client.Connect('127.0.0.1', $port)
+            throw "Private host port $port stayed open"
+        } catch [System.Net.Sockets.SocketException] {
+            # Connection refused is the expected stopped state.
+        } finally { $client.Dispose() }
+    }
+}
+try {
+    $window = $null
+    for ($i=0; $i -lt 60; $i++) {
+        Start-Sleep -Milliseconds 500
+        $p.Refresh()
+        if ($p.HasExited) { throw 'WPF launcher exited before host controls appeared' }
+        if ($p.MainWindowHandle -ne 0) {
+            $window = [System.Windows.Automation.AutomationElement]::FromHandle($p.MainWindowHandle)
+            if ($window) { break }
+        }
+    }
+    if (!$window) { throw 'WPF private host test has no window' }
+    Wait-HostControl 'Start server' | Out-Null
+    Invoke-HostControl 'Start server'
+    Wait-HostControl 'Running — 127.0.0.1' | Out-Null
+    Invoke-HostControl 'Stop server'
+    Wait-HostControl 'Stopped' | Out-Null
+    Assert-HostPortsClosed
+    Invoke-HostControl 'Start server'
+    Wait-HostControl 'Running — 127.0.0.1' | Out-Null
+    if (!$p.CloseMainWindow()) { throw 'Could not request host launcher close' }
+    if (!$p.WaitForExit(20000)) { throw 'Launcher did not stop its private server on close' }
+    if ($p.ExitCode -ne 0) { throw "Host launcher exit code $($p.ExitCode)" }
+    Assert-HostPortsClosed
+} finally {
+    if (!$p.HasExited) { $p.Kill($true) }
+}
+Write-Host 'PASS: WPF private host controls, Start, Stop, restart, and owned-server cleanup on launcher close.'

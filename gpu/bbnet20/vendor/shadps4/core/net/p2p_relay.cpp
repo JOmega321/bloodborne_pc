@@ -274,6 +274,12 @@ Relay::Path Relay::Route(const Endpoint& dest, std::span<const u8> wire, const S
     if (peer.relayed && now < peer.missing_until) {
         return Path::Direct;
     }
+    // OnReceive deliberately returns a peer to direct after a direct reply when it has
+    // never sent anything through the UDP relay. Do not let the default force_ undo that
+    // decision on the next packet: direct_copy below would then suppress the working path.
+    if (peer.direct_rx && !peer.relay_seen) {
+        return Path::Direct;
+    }
     if (!peer.relayed) {
         if (force_) {
             peer.relayed = true;
@@ -330,6 +336,9 @@ Relay::Received Relay::OnReceive(std::span<const u8> data, const Endpoint& from)
                 found != nullptr && !found->direct_rx) {
                 Peer& peer = *found;
                 peer.direct_rx = true;
+                Core::Bloodborne::BbscTimelineEvent(
+                    "NET", fmt::format("direct P2P reply from '{}' (peer UDP relay traffic: {})",
+                                       IdText(peer.id), peer.relay_seen ? "seen" : "not seen"));
                 peer.early.clear();
                 if (peer.relayed && !peer.relay_seen) {
                     // It answers directly and never used the relay: direct from now on.

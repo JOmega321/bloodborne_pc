@@ -53,6 +53,7 @@ jobs:
           set_language('ru')
           assert tr('Качество текстур') == 'Качество текстур'
           PY
+          bash tests/test_p2p_relay.sh
           g++ -std=c++17 -Wall -Wextra -Werror tests/test_hook_ranges.cpp -o /tmp/hook-ranges-test
           /tmp/hook-ranges-test
           python3 -m compileall -q launcher

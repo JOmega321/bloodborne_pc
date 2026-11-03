@@ -118,6 +118,7 @@ public partial class MainWindow
         var connections = new StackPanel { Orientation = Orientation.Horizontal };
         Button("Use address", connections, () => {
             var host = Host();
+            store.Set("private_host_address", host);
             store.Set("online", "1"); store.Set("online_bbsc", "1"); store.Set("online_pool", "seamless");
             store.Set("skip_network_choice", "0"); store.Set("online_upnp", "0");
             store.Set("online_community", "http://" + host); store.Set("online_server", host + ":31313");

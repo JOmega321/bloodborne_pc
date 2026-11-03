@@ -134,6 +134,7 @@ class HostPage:
     def use_private_host(self, _):
         try:
             values = private_server.connection_settings(self.host_address.get_text())
+            self.settings['private_host_address'] = private_server.address(self.host_address.get_text())
             self.online_row.set_active(True)
             self.pool_row.set_selected(0)
             self.bbsc_row.set_active(True)

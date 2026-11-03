@@ -138,6 +138,10 @@ def bbsc_local_server(env, user):
         shadnet = ''
     if not shadnet:
         return
+    from online import bbsc_relay_address
+    env.setdefault('BBSC_RELAY', bbsc_relay_address(env.get('BB_COMMUNITY_SERVER')))
+    os.environ['BBSC_RELAY'] = env['BBSC_RELAY']
+    log(f"Co-op: shared BBSC relay {env['BBSC_RELAY']}")
     import socket
     try:
         socket.create_connection(('127.0.0.1', 20443), timeout=1).close()
@@ -175,11 +179,20 @@ def bbsc_local_server(env, user):
 def stop_bbsc_local_server():
     global _bbsc_server
     if _bbsc_server is not None:
-        with contextlib.suppress(OSError):
-            _bbsc_server.terminate()
-        with contextlib.suppress(Exception):
-            _bbsc_server.wait(timeout=5)
+        server = _bbsc_server
+        try:
+            if server.poll() is None:
+                server.terminate()
+            try:
+                server.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                server.kill()
+                server.wait(timeout=5)
+        except (OSError, subprocess.TimeoutExpired) as error:
+            log(f'Co-op: could not confirm BBSC game server shutdown ({error})')
+            return
         _bbsc_server = None
+        log('Co-op: BBSC game server stopped (127.0.0.1:20443)')
 
 
 def large_scene_memory(env, scene):

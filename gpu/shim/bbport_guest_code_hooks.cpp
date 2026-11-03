@@ -15,7 +15,7 @@
 #include <cstring>
 #include <memory>
 #include <mutex>
-#include <set>
+#include "bbport_hook_ranges.h"
 #include <vector>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -36,7 +36,7 @@ constexpr std::size_t AreaSize = 4u << 20; // trampolines (~400 bytes each)
 constexpr std::int64_t JumpReach = 0x7000'0000; // inside a rel32 jump's 2 GiB
 
 std::mutex hook_mutex;
-std::set<std::uintptr_t> hooked_sites; // first bytes of installed hooks
+BbHookRanges hooked_sites;
 
 /// An executable area within reach of its code, mapped on first use.
 struct Area {
@@ -145,8 +145,7 @@ bool InstallGuestCodeHook(void* address, std::span<const std::uint8_t> expected,
         return false;
     }
     const auto begin = reinterpret_cast<std::uintptr_t>(code);
-    const auto overlap = hooked_sites.lower_bound(begin > 16 ? begin - 16 : 0);
-    if (overlap != hooked_sites.end() && *overlap < begin + expected.size()) {
+    if (hooked_sites.Overlaps(begin, expected.size())) {
         std::fprintf(stderr, "Guest code hook at %p overlaps another one\n", address);
         return false;
     }
@@ -252,7 +251,7 @@ bool InstallGuestCodeHook(void* address, std::span<const std::uint8_t> expected,
     const std::int32_t rel32 = std::int32_t(rel);
     std::memcpy(patch.data() + 1, &rel32, 4);
     WriteCode(code, patch.data(), patch.size());
-    hooked_sites.insert(begin);
+    hooked_sites.Add(begin, expected.size());
     return true;
 }
 

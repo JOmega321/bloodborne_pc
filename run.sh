@@ -263,6 +263,8 @@ if [[ ${BB_ONLINE:-0} == 1 && -f scripts/online.py ]]; then
     # bbsc-local). It lives as long as the game: a watcher stops it when this process (exec'd into
     # the game below) is gone. Messages and bloodstains are then this PC's only.
     if [[ ${BB_BBSC:-0} == 1 && -f scripts/bbsc_gameserver/bbsc_gameserver.py ]]; then
+        export BBSC_RELAY=${BBSC_RELAY:-$("$PYTHON" scripts/online.py bbsc-relay)}
+        echo "Co-op: shared BBSC relay $BBSC_RELAY"
         bbsc_shadnet=$("$PYTHON" scripts/online.py bbsc-local) || bbsc_shadnet=
         if [[ -n $bbsc_shadnet ]]; then
             bbsc_dir=${BB_USER_DIR:-$data/user}/bbsc
@@ -274,8 +276,16 @@ if [[ ${BB_ONLINE:-0} == 1 && -f scripts/online.py ]]; then
                       --data "$bbsc_dir/online-data.json" --log-dir "$bbsc_dir/logs" \
                       > "$bbsc_dir/logs/gameserver-console.log" 2>&1 &
                   server_pid=$!
+                  stop_bbsc_helper() {
+                      trap '' TERM INT
+                      kill "$server_pid" 2>/dev/null || true
+                      wait "$server_pid" 2>/dev/null || true
+                      echo "Co-op: BBSC game server stopped (127.0.0.1:20443)"
+                  }
+                  trap stop_bbsc_helper EXIT
+                  trap 'exit 0' TERM INT
                   while kill -0 "$game_pid" 2>/dev/null && kill -0 "$server_pid" 2>/dev/null; do sleep 2; done
-                  kill "$server_pid" 2>/dev/null ) &
+                ) &
                 echo "Co-op: BBSC game server on 127.0.0.1:20443 (summons -> $bbsc_shadnet:31315)"
             else
                 echo "Co-op: a game server answers on 127.0.0.1:20443 already: used"

@@ -279,6 +279,12 @@ def check_thd(community):
     return results
 
 
+def bbsc_relay_address(community=None):
+    """Pin the shared BBSC relay before the HTTP status fallback changes the game address."""
+    host = community_address(community).split('://', 1)[1]
+    return host + ':20444'
+
+
 def bbsc_local_server():
     """The shadNet host for a local BBSC game server, or '' (see the module's description)."""
     mode = os.environ.get('BB_BBSC_LOCAL_SERVER', 'auto').strip().lower()
@@ -303,6 +309,7 @@ def bbsc_local_server():
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     sub = parser.add_subparsers(dest='command', required=True)
+    sub.add_parser('bbsc-relay')
     overrides = sub.add_parser('overrides')
     overrides.add_argument('--user', required=True)
     overrides.add_argument('--plain', action='store_true')
@@ -322,6 +329,9 @@ def main():
         return
     server = os.environ.get('BB_SHADNET_SERVER') or SHADNET_SERVER
     community = community_address(os.environ.get('BB_COMMUNITY_SERVER'))
+    if a.command == 'bbsc-relay':
+        print(bbsc_relay_address(community))
+        return
     webapi = webapi_setting(os.environ.get('BB_SHADNET_WEBAPI'), server, community)
     if a.command == 'thd-overrides':
         path, base = write_thd_overrides(a.user, os.environ.get('BB_COMMUNITY_SERVER'))

@@ -111,6 +111,19 @@ def main():
                     return child
                 host = spawn('regresshost', 'host', 0)
                 guest = spawn('regressguest', 'guest', 'wait')
+                deadline = time.monotonic() + 15
+                while True:
+                    logs = [(state / (role + '.log')).read_text(errors='replace')
+                            for role in ('host', 'guest')]
+                    if all('SIG1_CONTEXT_READY' in text and
+                           (mode == 'relay' or 'our public endpoint' in text) for text in logs):
+                        break
+                    if host.poll() is not None or guest.poll() is not None or time.monotonic() > deadline:
+                        raise AssertionError(f'{mode}: signaling context/STUN discovery not ready')
+                    time.sleep(.1)
+                for child in (host, guest):
+                    child.stdin.write(b'activate\n')
+                    child.stdin.flush()
                 deadline = time.monotonic() + 25
                 while True:
                     text = (state / 'host.log').read_text(errors='replace')

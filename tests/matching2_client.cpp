@@ -85,6 +85,11 @@ int main(int argc,char** argv) {
     OrbisNpSignalingContextId sig_ctx{};OrbisNpSignalingConnectionId sig_conn{};
     OrbisNpId peer_id{};SetNpId(peer_id,!strcmp(argv[3],"host")?"regressguest":"regresshost");
     if(sig_context(&identity,reinterpret_cast<void*>(sig1_cb),nullptr,&sig_ctx))std::_Exit(31);
+    puts("SIG1_CONTEXT_READY");std::fflush(stdout);
+    // The controller waits for both contexts, and for genuine STUN in the direct case,
+    // before activation. This separates discovery failures from normal startup races.
+    char activate[16]{};
+    if(std::scanf("%15s",activate)!=1 || std::strcmp(activate,"activate"))std::_Exit(34);
     if(sig_activate(sig_ctx,&peer_id,&sig_conn))std::_Exit(32);
     wait_for(sig1_ready,"Sig1 connection");
     OrbisNpMatching2ContextId ctx{};

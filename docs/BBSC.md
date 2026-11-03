@@ -158,3 +158,16 @@ and rejects endpoint updates from other peers/ports.
 
 These corrections require a two-player gameplay retry before claiming the joining failure is
 resolved. Server lifecycle, relay transport and launcher startup checks cannot establish that.
+
+The official shadNet server source in BBSC 0.0.2 still expects STUN requests/replies with the
+older four-byte `FFFF FFFF` virtual-port header. The client uses that envelope only for the
+21-byte STUN ping to its configured server, and accepts an exact six-byte legacy echo only
+from that server. Peer signaling/gameplay keeps the modern codec and its communication-id,
+encryption and signature validation.
+
+`tests/test_matching2_native.sh` drives two real native networking modules through initial Sig1
+activation, Matching2 room creation/join and bidirectional datagrams on virtual port 30. It uses
+the official local server, temporary accounts and unrelated renderer-host ABI stubs, without game
+files. Its relay case disables STUN and forwards opaque relay packets; its direct case uses the
+server's real STUN listener with no relay fixture, and rejects pseudo-endpoint fallback. This is
+run before AppImage packaging. Character loading and real Internet gameplay still need testing.

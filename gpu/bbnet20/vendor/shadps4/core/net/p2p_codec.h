@@ -62,6 +62,9 @@ public:
     std::optional<KeyEntry> FindPeerEntry(const Endpoint& peer) const;
     void SetCommunicationId(std::optional<CommunicationId> id);
     std::optional<CommunicationId> GetCommunicationId() const;
+    // Official shadNet servers still use the older four-byte signaling envelope for STUN.
+    void SetStunServer(u32 addr_nbo, u16 port_nbo);
+    bool IsStunServer(const Endpoint& endpoint) const;
 
 private:
     struct Installed {
@@ -74,6 +77,7 @@ private:
     std::optional<P2PKey> wildcard_key;
     std::optional<P2PKey> default_key;
     std::optional<CommunicationId> communication_id;
+    std::optional<Endpoint> stun_server;
 };
 
 class FramingCodec final : public Codec {

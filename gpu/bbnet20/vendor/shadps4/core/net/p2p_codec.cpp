@@ -92,11 +92,39 @@ std::optional<CommunicationId> Keyring::GetCommunicationId() const {
     return communication_id;
 }
 
+void Keyring::SetStunServer(u32 addr_nbo, u16 port_nbo) {
+    std::scoped_lock lock{mutex};
+    stun_server.reset();
+    if (addr_nbo != 0 && port_nbo != 0) {
+        sockaddr_in addr{};
+        addr.sin_family = AF_INET;
+        addr.sin_addr.s_addr = addr_nbo;
+        addr.sin_port = port_nbo;
+        stun_server = Endpoint::FromSockaddr(reinterpret_cast<const sockaddr*>(&addr), sizeof(addr));
+    }
+}
+
+bool Keyring::IsStunServer(const Endpoint& endpoint) const {
+    std::scoped_lock lock{mutex};
+    return stun_server && *stun_server == endpoint;
+}
+
 FramingCodec::FramingCodec(std::shared_ptr<Keyring> keyring, BroadcastObserver broadcast_observer)
     : keyring(std::move(keyring)), broadcast_observer(std::move(broadcast_observer)) {}
 
 Codec::Decoded FramingCodec::Decode(std::span<const u8> packet, const Endpoint& from) {
     Decoded out;
+    // Legacy shadNet STUN: [src vport FFFF][dst vport FFFF][IPv4 4][port 2].
+    // Scope this exception to the configured server and exact reply size; peers continue
+    // using the PS4 framing and all existing digest/crypto/signature checks below.
+    if (packet.size() == 10 && packet[0] == 0xFF && packet[1] == 0xFF &&
+        packet[2] == 0xFF && packet[3] == 0xFF && keyring->IsStunServer(from)) {
+        out.kind = Kind::Signaling;
+        out.src_vport = SignalingVport;
+        out.dst_vport = SignalingVport;
+        out.payload.assign(packet.begin() + 4, packet.end());
+        return out;
+    }
     if (packet.size() < 2 || packet[0] != Marker || (packet[1] & FlagValid) == 0) {
         return out;
     }
@@ -226,7 +254,12 @@ std::vector<u8> FramingCodec::EncodeDatagram(u16 src_vport, u16 dst_vport,
                          body);
 }
 
-std::vector<u8> FramingCodec::EncodeSignaling(std::span<const u8> data, const Endpoint&) {
+std::vector<u8> FramingCodec::EncodeSignaling(std::span<const u8> data, const Endpoint& to) {
+    if (data.size() == 21 && data[0] == 0x01 && keyring->IsStunServer(to)) {
+        std::vector<u8> packet(4, 0xFF);
+        packet.insert(packet.end(), data.begin(), data.end());
+        return packet;
+    }
     return FrameDatagram(SignalingVport, SignalingVport, KindDatagram, std::nullopt, data);
 }
 

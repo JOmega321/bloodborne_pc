@@ -26,3 +26,17 @@ esac
   gpu/bbnet20/vendor/shadps4/core/net/p2p_transport.cpp "${extra[@]}" -Wl,--gc-sections "${libs[@]}" -o "$work/relay-test"
 "$work/relay-test"
 echo 'PASS: production UDP relay keeps direct replies usable and retains working relay routing.'
+
+codec_extra=("${extra[@]}")
+if [[ ${#codec_extra[@]} == 0 ]]; then
+  codec_extra=(gpu/bbnet20/vendor/shadps4/core/net/host_net.cpp)
+fi
+"${BB_TEST_CXX:-g++}" "${platform[@]}" -std=c++20 -O1 -ffunction-sections -fdata-sections -pthread \
+  -Itests/relay_stubs -Igpu/bbnet20/include -Igpu/bbnet20/vendor/shadps4 -Igpu \
+  tests/test_p2p_codec.cpp gpu/bbnet20/vendor/shadps4/core/net/p2p_codec.cpp \
+  gpu/bbnet20/vendor/shadps4/core/net/p2p_crypto.cpp \
+  gpu/bbnet20/vendor/shadps4/core/net/p2p_relay.cpp \
+  gpu/bbnet20/vendor/shadps4/core/net/p2p_transport.cpp "${codec_extra[@]}" \
+  -Wl,--gc-sections "${libs[@]}" -lcrypto -o "$work/codec-test"
+"$work/codec-test"
+echo 'PASS: official shadNet STUN framing interoperates; peer digest, crypto and signatures remain enforced.'

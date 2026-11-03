@@ -129,6 +129,8 @@ class HostServer:
                     reservations.append(sock)
                     if os.name == 'nt':
                         sock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+                    else:
+                        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                     sock.bind((self.host, port))
         finally:
             for sock in reservations:
@@ -196,19 +198,30 @@ class HostServer:
                     '--log-dir', str(logs)])]
         try:
             for name, command in commands:
-                child = subprocess.Popen(command, cwd=work, env=env, stdout=subprocess.PIPE,
-                        stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace',
-                        creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+                service_log = logs / (name.lower().replace(' ', '-') + '.log')
+                with service_log.open('w', encoding='utf-8') as output:
+                    child = subprocess.Popen(command, cwd=work, env=env, stdout=output,
+                            stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                            creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
                 self.children.append(child)
-                def read(child=child, name=name):
-                    for line in child.stdout:
-                        # Do not expose request body samples or registration keys in the UI log.
-                        if 'request sample' not in line and key not in line:
-                            self.log(name + ': ' + line.rstrip())
+                self.log(name + ': starting on ' + self.host)
+                def read(child=child, name=name, service_log=service_log):
+                    with service_log.open(encoding='utf-8', errors='replace') as output:
+                        while True:
+                            line = output.readline()
+                            if not line:
+                                if child.poll() is not None:
+                                    break
+                                time.sleep(0.1)
+                                continue
+                            # Account secrets are never included in the live UI log.
+                            if 'request sample' not in line and key not in line:
+                                self.log(name + ': ' + line.rstrip())
                 reader = threading.Thread(target=read, daemon=True)
                 reader.start()
                 self.readers.append(reader)
             deadline = time.monotonic() + 20
+            last_error = 'starting'
             while time.monotonic() < deadline:
                 if cancel is not None and cancel.is_set():
                     self.stop()
@@ -219,9 +232,10 @@ class HostServer:
                     self.probe()
                     self.log('READY: Private server running at ' + self.host)
                     return
-                except (OSError, ValueError):
+                except (OSError, ValueError) as error:
+                    last_error = str(error)
                     time.sleep(0.2)
-            raise RuntimeError('Server startup timed out. See the host log.')
+            raise RuntimeError('Server startup timed out: ' + last_error)
         except BaseException:
             self.stop()
             raise
@@ -280,7 +294,13 @@ def main():
     if args.state is None:
         parser.error('--state is required for serve')
     stopped = threading.Event()
-    threading.Thread(target=lambda: (sys.stdin.buffer.read(), stopped.set()), daemon=True).start()
+    def stdin_closed():
+        try:
+            while os.read(sys.stdin.fileno(), 1024):
+                pass
+        finally:
+            stopped.set()
+    threading.Thread(target=stdin_closed, daemon=True).start()
     signal.signal(signal.SIGTERM, lambda *_: stopped.set())
     signal.signal(signal.SIGINT, lambda *_: stopped.set())
     host = HostServer(args.state, args.address, emit=lambda line: print(line, flush=True))

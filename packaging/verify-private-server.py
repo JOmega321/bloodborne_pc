@@ -57,7 +57,9 @@ def main():
             if not ready.wait(30):
                 child.stdin.close()
                 child.wait(timeout=30)
-                raise RuntimeError('Host was not ready: ' + ''.join(lines))
+                diagnostics = ''.join(path.name + ':\n' + path.read_text(encoding='utf-8', errors='replace')[-8000:]
+                                      for path in (state / 'logs').glob('*.log'))
+                raise RuntimeError('Host was not ready: ' + ''.join(lines) + diagnostics)
             return child
         def stop(child):
             child.stdin.close()

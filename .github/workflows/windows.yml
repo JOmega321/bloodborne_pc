@@ -73,16 +73,23 @@ jobs:
             mingw-w64-clang-x86_64-miniupnpc
             mingw-w64-clang-x86_64-python
       - name: Verify and restore successful native build
+        id: native-source
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           git fetch --depth=1 origin f302274ca04f8f745244622d6a7ea847d51f27bf
-          git diff --exit-code f302274ca04f8f745244622d6a7ea847d51f27bf HEAD -- . ':!packaging/windows/build-dlss.ps1' ':!packaging/verify-dlss.py' ':!.github/workflows/windows.yml' \
+          if git diff --quiet f302274ca04f8f745244622d6a7ea847d51f27bf HEAD -- . ':!packaging/windows/build-dlss.ps1' ':!packaging/verify-dlss.py' ':!.github/workflows/windows.yml' \
             ':!launcher/bbport_launcher.py' ':!launcher/bbport_launcher_common.py' \
             ':!run.py' ':!run.sh' ':!scripts/online.py' \
             ':!tests/test_launcher_gpu.py' ':!tests/test_online_status.py' \
-            ':!scripts/bbsc_gameserver/bbsc_gameserver.py' ':!docs/BBSC.md' ':!packaging/verify-online.py'
+            ':!scripts/bbsc_gameserver/bbsc_gameserver.py' ':!docs/BBSC.md' ':!packaging/verify-online.py'; then
+            echo 'match=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'Native source changed: rebuilding instead of restoring cache.'
+            echo 'match=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           gh api repos/JOmega321/bloodborne_pc/actions/artifacts/13178559529/zip > native-windows.zip
           python - <<'PYVERIFY'
           import hashlib, zipfile
@@ -93,6 +100,7 @@ jobs:
               z.extractall('.')
           PYVERIFY
       - name: Check whether cached native runtime versions still match
+        if: steps.native-source.outputs.match == 'true'
         id: native-cache
         shell: msys2 {0}
         run: |
@@ -105,8 +113,8 @@ jobs:
               output.write('rebuild=' + ('false' if same else 'true') + '\n')
           print('Verified cached native runtime versions match.' if same else 'Runtime package versions changed: rebuilding native code before packaging.')
           PYMATCH
-      - name: Rebuild native application for changed MSYS2 packages
-        if: steps.native-cache.outputs.rebuild == 'true'
+      - name: Rebuild native application when source or MSYS2 packages changed
+        if: steps.native-source.outputs.match != 'true' || steps.native-cache.outputs.rebuild == 'true'
         shell: msys2 {0}
         run: bash packaging/windows/build-native.sh
       - name: Verify matching native runtime libraries

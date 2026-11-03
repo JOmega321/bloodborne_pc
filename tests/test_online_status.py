@@ -26,6 +26,11 @@ class OnlineStatusTests(unittest.TestCase):
         return mock.patch.object(online.urllib.request, 'urlopen',
                                  side_effect=lambda *a, **kw: io.BytesIO(body))
 
+    def test_shared_relay_address_is_independent_of_local_status_helper(self):
+        self.assertEqual(online.bbsc_relay_address('http://play.seamlesshunt.com'),
+                         'play.seamlesshunt.com:20444')
+        self.assertEqual(online.bbsc_relay_address('http://100.64.2.3'), '100.64.2.3:20444')
+
     def test_game_status_is_checked_in_full(self):
         with self.reply(STATUS):
             self.assertEqual(online.game_status('http://server'), (True, ''))

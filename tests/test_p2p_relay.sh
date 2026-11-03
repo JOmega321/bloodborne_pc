@@ -7,12 +7,21 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 platform=()
 libs=()
+extra=()
 case "$(uname -s)" in
-  MINGW*|MSYS*) platform=(-Igpu/platform/win32/include); libs=(-lws2_32) ;;
+  MINGW*|MSYS*)
+    platform=(-Igpu/platform/win32/include -Igpu/third_party/wepoll)
+    libs=(-lws2_32)
+    "${BB_TEST_CC:-clang}" -c gpu/third_party/wepoll/wepoll.c -o "$work/wepoll.o"
+    # PE linkers resolve references before discarding sections: link the complete native
+    # socket/TCP support rather than relying on ELF's section elimination.
+    extra=(gpu/bbnet20/vendor/shadps4/core/net/p2p_tcp.cpp
+           gpu/bbnet20/vendor/shadps4/core/net/host_net.cpp "$work/wepoll.o")
+    ;;
 esac
 "${BB_TEST_CXX:-g++}" "${platform[@]}" -std=c++20 -O1 -ffunction-sections -fdata-sections -pthread \
   -Itests/relay_stubs -Igpu/bbnet20/include -Igpu/bbnet20/vendor/shadps4 -Igpu \
   tests/test_p2p_relay.cpp gpu/bbnet20/vendor/shadps4/core/net/p2p_relay.cpp \
-  gpu/bbnet20/vendor/shadps4/core/net/p2p_transport.cpp -Wl,--gc-sections "${libs[@]}" -o "$work/relay-test"
+  gpu/bbnet20/vendor/shadps4/core/net/p2p_transport.cpp "${extra[@]}" -Wl,--gc-sections "${libs[@]}" -o "$work/relay-test"
 "$work/relay-test"
 echo 'PASS: production UDP relay keeps direct replies usable and retains working relay routing.'

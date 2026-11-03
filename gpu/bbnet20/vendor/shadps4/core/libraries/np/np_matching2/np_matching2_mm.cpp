@@ -26,6 +26,7 @@
 #include "core/libraries/np/np_signaling/np_signaling_transport.h"
 #include "core/libraries/np/signaling_handler.h"
 #include "core/net/p2p_relay.h"
+#include "core/net/p2p_codec.h"
 #include "shadnet.pb.h"
 #include "shadnet/client.h"
 
@@ -844,6 +845,7 @@ void SetMmShadNetClient(std::shared_ptr<ShadNet::ShadNetClient> client,
         server_addr = g_mm.server_addr;
         server_udp_port = g_mm.server_udp_port;
     }
+    Net::GetP2PKeyring()->SetStunServer(server_addr, server_udp_port);
     LOG_INFO(Lib_NpMatching2, "ShadNet features: matching2_enabled={}", matching2_enabled);
     Net::UPnPClient::Instance().SetP2PFeaturesEnabled(matching2_enabled);
 

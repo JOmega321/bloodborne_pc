@@ -105,6 +105,11 @@ jobs:
             dist/native.sha256
           if-no-files-found: error
           retention-days: 7
+      - name: Verify real two-client room signaling and UDP data
+        run: |
+          nix-build --expr 'import ./packaging/private-server.nix { pkgs = import <nixpkgs> {}; }' -o out/private-server
+          server=$(readlink -f out/private-server)/bin/shadnet
+          nix-shell --run "bash tests/test_matching2_native.sh '$PWD/out/gpu/libbbnet20.so' '$server'"
       - name: Build AppImage with upstream Nix packaging
         run: |
           bash packaging/appimage.sh

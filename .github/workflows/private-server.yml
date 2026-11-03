@@ -19,7 +19,9 @@ jobs:
             max-jobs = 2
             cores = 2
       - name: Check production UDP relay routing
-        run: bash tests/test_p2p_relay.sh
+        run: |
+          bash tests/test_signaling_packet.sh
+          bash tests/test_p2p_relay.sh
       - name: Install virtual display
         run: sudo apt-get update && sudo apt-get install -y xvfb xauth
       - name: Build pinned native private server

@@ -22,6 +22,7 @@
 #include "core/libraries/np/np_matching2/np_matching2_internal.h"
 #include "core/libraries/np/np_matching2/np_matching2_signaling.h"
 #include "core/libraries/np/np_signaling/np_signaling_state.h"
+#include "core/libraries/np/np_signaling/np_signaling_packet.h"
 #include <fmt/format.h>
 
 #include "core/bbsc_relay_client.h"
@@ -92,12 +93,6 @@ bool ResolvePeerEndpoint(const NpMatching2::MemberCache& member, u32* out_addr, 
     return resolved;
 }
 
-bool HasSignalingMagic(const u8* buf, size_t nbytes) {
-    return nbytes >= sizeof(NpSignaling::kSignalingMagic) + 1 &&
-           std::memcmp(buf, NpSignaling::kSignalingMagic, sizeof(NpSignaling::kSignalingMagic)) ==
-               0;
-}
-
 void HandleStunEcho(const NpSignaling::StunEcho& echo) {
     {
         NpSignaling::SignalingMutexGuard lock;
@@ -122,14 +117,17 @@ void ProcessSignalingPacket(const void* data, u32 len, u32 from_addr, u16 from_p
     const auto* buf = static_cast<const u8*>(data);
     const auto nbytes = static_cast<size_t>(len);
 
-    if (nbytes == sizeof(NpSignaling::StunEcho)) {
+    const auto envelope = NpSignaling::ClassifyPacketEnvelope(
+        {buf, nbytes}, from_addr, from_port, NpSignaling::Transport::MmServerAddr(),
+        NpSignaling::Transport::MmServerUdpPort());
+    if (envelope == NpSignaling::PacketEnvelope::StunEcho) {
         NpSignaling::StunEcho echo{};
         std::memcpy(&echo, buf, sizeof(echo));
         HandleStunEcho(echo);
         return;
     }
 
-    if (!HasSignalingMagic(buf, nbytes)) {
+    if (envelope != NpSignaling::PacketEnvelope::Signaling) {
         return;
     }
 
@@ -1381,7 +1379,8 @@ void ActivationThreadMain() {
                     return true;
                 }
                 NpSignaling::SignalingMutexGuard signaling_lock;
-                return !state.pending_activations.empty();
+                return !state.pending_activations.empty() ||
+                       !state.pending_matching2_contexts.empty();
             });
         }
 
@@ -1390,6 +1389,18 @@ void ActivationThreadMain() {
         }
 
         ProcessPendingActivations();
+        std::vector<s32> matching2;
+        {
+            NpSignaling::SignalingMutexGuard lock;
+            matching2.swap(state.pending_matching2_contexts);
+        }
+        for (const auto ctx_id : matching2) {
+            auto ctx = NpHandler::GetInstance().GetMatching2ContextManager().Get(
+                static_cast<NpMatching2::OrbisNpMatching2ContextId>(ctx_id));
+            if (ctx && ctx->started && !state.runtime_stop.load(std::memory_order_relaxed)) {
+                StartMatching2(*ctx);
+            }
+        }
     }
 }
 
@@ -1648,6 +1659,24 @@ void StartMatching2(NpMatching2::ContextObject& ctx) {
         return;
     }
 
+    // Room replies/member notifications run on ShadNet's reader. ResolvePeer needs that
+    // reader to receive its reply, so it deliberately returns false there. Previously this
+    // discarded every unresolved room peer, even after Sig1 had already connected.
+    if (ShadNet::ShadNetClient::OnReaderThread()) {
+        auto& state = NpHandler::GetInstance().GetSignalingState();
+        {
+            NpSignaling::SignalingMutexGuard lock;
+            auto& pending = state.pending_matching2_contexts;
+            if (std::find(pending.begin(), pending.end(), ctx.ctx_id) == pending.end()) {
+                pending.push_back(ctx.ctx_id);
+            }
+        }
+        state.activation_cv.notify_one();
+        LOG_INFO(Lib_NpMatching2, "Room peer lookup queued for background worker: ctx={}",
+                 ctx.ctx_id);
+        return;
+    }
+
     if (!NpSignaling::Transport::EnsureTransport()) {
         return;
     }
@@ -1677,6 +1706,8 @@ void StartMatching2(NpMatching2::ContextObject& ctx) {
         u32 peer_addr = 0;
         u16 peer_port = 0;
         if (!ResolvePeerEndpoint(member, &peer_addr, &peer_port)) {
+            LOG_WARNING(Lib_NpMatching2, "Room peer lookup failed: ctx={} member={} peer='{}'",
+                        ctx.ctx_id, member_id, OnlineIdString(member.np_id.handle));
             continue;
         }
 
@@ -1706,6 +1737,9 @@ void StartMatching2(NpMatching2::ContextObject& ctx) {
         peer.member_id = member_id;
         peer.addr = peer_addr;
         peer.port = peer_port;
+        LOG_INFO(Lib_NpMatching2,
+                 "Room peer linked: ctx={} member={} transport={} peer='{}' status={}",
+                 ctx.ctx_id, member_id, transport_id, OnlineIdString(member.np_id.handle), status);
         peer.status = status == NpSignaling::ORBIS_NP_SIGNALING_CONN_STATUS_ACTIVE
                           ? kMatching2ConnActive
                           : kMatching2ConnPending;

@@ -1,0 +1,33 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -20,7 +20,11 @@
+ 
+ find_package(Qt6 REQUIRED COMPONENTS Core Network Sql Concurrent HttpServer)
+ 
+-add_subdirectory(externals)
++# Use the build environment's matched protoc, headers and runtime. Never fetch dependencies
++# from inside a package build.
++find_package(Protobuf REQUIRED)
++add_library(libprotobuf ALIAS protobuf::libprotobuf)
++add_executable(protoc ALIAS protobuf::protoc)
+ 
+ set(PROTO_OUT "${CMAKE_CURRENT_BINARY_DIR}/proto_gen")
+ file(MAKE_DIRECTORY "${PROTO_OUT}")
+@@ -96,7 +100,6 @@
+ target_include_directories(shadnet PRIVATE
+     src
+     "${PROTO_OUT}"                                    
+-    "${CMAKE_CURRENT_SOURCE_DIR}/externals/protobuf/src"
+ )
+ 
+ target_link_libraries(shadnet PRIVATE
+@@ -124,8 +127,7 @@
+     target_include_directories(bloodborne_matching_guest_probe PRIVATE
+         src
+         "${PROTO_OUT}"
+-        "${CMAKE_CURRENT_SOURCE_DIR}/externals/protobuf/src"
+-    )
++        )
+     target_link_libraries(bloodborne_matching_guest_probe PRIVATE libprotobuf)
+ endif()
+ 

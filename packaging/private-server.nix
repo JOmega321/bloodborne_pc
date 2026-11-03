@@ -8,12 +8,13 @@ pkgs.stdenv.mkDerivation {
     sha256 = "b18112a62a8f7048ec2c33f88b31b5f9ab7f68103f3bcc8b11a31cfdc8f7978e";
   };
   nativeBuildInputs = [ pkgs.unzip pkgs.cmake pkgs.ninja pkgs.qt6.wrapQtAppsHook ];
-  buildInputs = [ pkgs.qt6.qtbase pkgs.qt6.qthttpserver ];
+  buildInputs = [ pkgs.qt6.qtbase pkgs.qt6.qthttpserver pkgs.protobuf ];
   unpackPhase = ''
     unzip -q $src
     tar -xzf BBSC-0.0.2-Server-Linux/shadnet-src.tar.gz
     sourceRoot=shadnet-src
   '';
+  patches = [ ./private-server-system-protobuf.patch ];
   postPatch = ''
     # Accounts and configuration belong in the launcher's writable state directory.
     substituteInPlace src/main.cpp \

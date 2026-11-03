@@ -142,3 +142,19 @@ arrived. Previously the default forced-relay policy immediately undid OnReceive'
 to direct and suppressed subsequent direct packets. A production-source regression reproduces
 that failure, checks repeated direct sends, and verifies that real relayed peer traffic still
 switches to the working relay. First direct replies are recorded in the BBSC timeline.
+
+### Room signaling diagnostics
+
+A successful Sig1 connection is not sufficient for a room join: Matching2 must also report
+`Matching2 signaling established`. Room replies and member notifications arrive on the shadNet
+reader thread. Endpoint lookup must run on the activation worker so the reader can receive the
+lookup reply; an unresolved reader-thread lookup must not discard the room peer.
+
+The log now records room lookup queuing, peer linkage, and the existing established callback.
+Short BBSC progress snapshots (including an empty six-byte `SHAD 26 00` message) are processed
+as BBSC messages, never as a raw six-byte STUN reply. Only the configured matching server's
+UDP endpoint may supply STUN replies. The packet classification regression covers this collision
+and rejects endpoint updates from other peers/ports.
+
+These corrections require a two-player gameplay retry before claiming the joining failure is
+resolved. Server lifecycle, relay transport and launcher startup checks cannot establish that.

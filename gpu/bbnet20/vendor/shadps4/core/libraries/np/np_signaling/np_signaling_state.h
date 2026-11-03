@@ -290,6 +290,7 @@ struct NpSignalingState {
     std::unordered_map<CtxNpIdKey, s32, CtxNpIdKeyHash> npid_to_conn;
     std::unordered_map<s32, PeerNetInfoResult> peer_netinfo_results;
     std::vector<PendingActivation> pending_activations;
+    std::vector<s32> pending_matching2_contexts;
 
     u32 peer_netinfo_next_id = 1;
     u32 peak_connection_count = 0;

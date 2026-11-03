@@ -16,6 +16,12 @@ public partial class MainWindow
     private Process? privateHost;
     private string privateHostLog = "";
     private bool privateHostReady;
+    private bool privateHostStopping;
+    private int privateHostExitCode;
+    private string privateHostAddress = "";
+    private string privateHostData = "";
+    private Action<string>? privateHostOutput;
+    private Action? privateHostRefresh;
 
     private string PrivateHostState => Path.Combine(
         store.Get("user_dir") is { Length: > 0 } user ? user : Path.Combine(Store.DataDir, "user"), "private-server");
@@ -36,7 +42,11 @@ public partial class MainWindow
 
     private void StopPrivateHost()
     {
-        if (privateHost is { HasExited: false } child) child.StandardInput.Close();
+        if (privateHost is { HasExited: false } child) {
+            privateHostStopping = true;
+            child.StandardInput.Close();
+            privateHostRefresh?.Invoke();
+        }
     }
 
     private Border PrivateHostCard(JsonObject item)
@@ -81,6 +91,32 @@ public partial class MainWindow
         var key = new PasswordBox { Margin = new Thickness(0, 4, 0, 8) };
         panel.Children.Add(new TextBlock { Text = "Private server registration key (shared privately by the host)" });
         panel.Children.Add(key);
+        void ReadKey() {
+            if (privateHostReady) {
+                try { key.Password = File.ReadAllText(Path.Combine(privateHostData, "registration-key.txt")).Trim(); }
+                catch (IOException error) { Line("FAILED: " + error.Message); }
+            }
+        }
+        void RefreshHost() {
+            start.IsEnabled = privateHost is null;
+            stop.IsEnabled = privateHost is not null;
+            address.IsEnabled = privateHost is null;
+            status.Text = privateHost is null ? (privateHostExitCode == 0 ? "Stopped" : "Failed — see host log")
+                : privateHostStopping ? "Stopping…" : privateHostReady ? "Running — " + privateHostAddress : "Starting…";
+        }
+        // Page rebuilds (including Use address and language changes) replace these delegates.
+        // Process callbacks always update the currently displayed controls.
+        privateHostRefresh = RefreshHost;
+        privateHostOutput = text => {
+            Line(text);
+            if (text.StartsWith("READY:")) {
+                privateHostReady = true;
+                ReadKey();
+                RefreshHost();
+            }
+        };
+        ReadKey();
+        RefreshHost();
         start.Click += (_, _) => {
             try {
                 if (privateHost is not null) return;
@@ -93,25 +129,22 @@ public partial class MainWindow
                 info.ArgumentList.Add("--state"); info.ArgumentList.Add(state);
                 var child = new Process { StartInfo = info, EnableRaisingEvents = true };
                 child.OutputDataReceived += (_, data) => { if (data.Data is { } text) Dispatcher.BeginInvoke(() => {
-                    Line(text);
-                    if (text.StartsWith("READY:")) {
-                        privateHostReady = true; status.Text = "Running — " + host;
-                        key.Password = File.ReadAllText(Path.Combine(state, "registration-key.txt")).Trim();
-                    }
+                    privateHostOutput?.Invoke(text);
                 }); };
-                child.ErrorDataReceived += (_, data) => { if (data.Data is { } text) Dispatcher.BeginInvoke(() => Line(text)); };
+                child.ErrorDataReceived += (_, data) => { if (data.Data is { } text) Dispatcher.BeginInvoke(() => privateHostOutput?.Invoke(text)); };
                 child.Exited += (_, _) => {
                     child.WaitForExit();
                     var code = child.ExitCode;
                     Dispatcher.BeginInvoke(() => {
                         if (ReferenceEquals(privateHost, child)) privateHost = null;
-                        privateHostReady = false; status.Text = code == 0 ? "Stopped" : "Failed — see host log";
-                        start.IsEnabled = true; stop.IsEnabled = false; address.IsEnabled = true;
+                        privateHostReady = false; privateHostStopping = false; privateHostExitCode = code;
+                        privateHostRefresh?.Invoke();
                         child.Dispose();
                     });
                 };
-                child.Start(); privateHost = child; privateHostReady = false;
-                start.IsEnabled = false; stop.IsEnabled = true; address.IsEnabled = false; status.Text = "Starting…";
+                child.Start(); privateHost = child; privateHostReady = false; privateHostStopping = false;
+                privateHostExitCode = 0; privateHostAddress = host; privateHostData = state;
+                privateHostRefresh?.Invoke();
                 child.BeginOutputReadLine(); child.BeginErrorReadLine();
             } catch (Exception error) { Line("FAILED: " + error.Message); }
         };
@@ -124,6 +157,7 @@ public partial class MainWindow
             store.Set("online_community", "http://" + host); store.Set("online_server", host + ":31313");
             store.Set("online_webapi", "http://" + host + ":31315"); store.Save();
             Line("Private-server connection selected. Each player needs an account on this server.");
+            Dispatcher.BeginInvoke(() => { if (shownSection is not null) BuildSection(shownSection); });
         });
         Button("Copy details", connections, () => {
             var host = Host();
@@ -148,7 +182,7 @@ public partial class MainWindow
                     name = store.Get("online_npid"), password = store.Get("online_password"), email = email.Text.Trim(), key = key.Password }));
                 child.StandardInput.Close();
                 await child.WaitForExitAsync();
-                Line((await output + await error).Trim());
+                privateHostOutput?.Invoke((await output + await error).Trim());
             } catch (Exception error) { Line("FAILED: " + error.Message); }
             finally { create.IsEnabled = true; }
         };

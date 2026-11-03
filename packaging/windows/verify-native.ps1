@@ -111,6 +111,8 @@ try {
     Wait-HostControl 'Start server' | Out-Null
     Invoke-HostControl 'Start server'
     Wait-HostControl 'Running — 127.0.0.1' | Out-Null
+    Invoke-HostControl 'Use address'
+    Wait-HostControl 'Running — 127.0.0.1' | Out-Null
     Invoke-HostControl 'Stop server'
     Wait-HostControl 'Stopped' | Out-Null
     Assert-HostPortsClosed
@@ -120,6 +122,8 @@ try {
     if (!$p.WaitForExit(20000)) { throw 'Launcher did not stop its private server on close' }
     if ($p.ExitCode -ne 0) { throw "Host launcher exit code $($p.ExitCode)" }
     Assert-HostPortsClosed
+    $saved = Get-Content (Join-Path $config 'settings.json') -Raw | ConvertFrom-Json
+    if (!$saved.online -or $saved.online_server -ne '127.0.0.1:31313' -or $saved.skip_network_choice) { throw 'Private connection settings did not persist' }
 } finally {
     if (!$p.HasExited) { $p.Kill($true) }
 }

@@ -1,0 +1,33 @@
+name: Private host smoke checks
+on:
+  push:
+    branches: [bbglorp-build]
+permissions:
+  contents: read
+jobs:
+  private-host:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    env:
+      NIX_PATH: nixpkgs=https://github.com/NixOS/nixpkgs/archive/58deea654ec5dd0644f31c840a07c29fa0592528.tar.gz
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: DeterminateSystems/nix-installer-action@9383ce2bf08796b65508822f5982f49151badc4e
+        with:
+          extra-conf: |
+            experimental-features = nix-command flakes
+            max-jobs = 2
+            cores = 2
+      - name: Install virtual display
+        run: sudo apt-get update && sudo apt-get install -y xvfb xauth
+      - name: Build pinned native private server
+        run: |
+          nix-build --expr 'import ./packaging/private-server.nix { pkgs = import <nixpkgs> {}; }' -o out/private-server
+          mkdir -p out/host-test/private-server
+          cp -r scripts launcher out/host-test/
+          ln -s "$(readlink -f out/private-server)/bin/shadnet" out/host-test/private-server/shadnet
+          cp out/private-server/bin/*.cfg out/host-test/private-server/
+      - name: Check real host lifecycle and GTK controls
+        run: |
+          python3 packaging/verify-private-server.py out/host-test
+          nix-shell -p 'python3.withPackages (p: [ p.pygobject3 ])' gtk4 libadwaita gobject-introspection --run 'xvfb-run -a python3 packaging/verify-host-ui.py out/host-test'

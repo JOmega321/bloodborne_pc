@@ -136,3 +136,9 @@ The launcher pins that relay before changing the HTTP server address and logs it
 The guest-hook installer also tracks exact byte ranges, allowing adjacent summon callbacks.
 Packaging tests cover registration/key rejection, password matching, two-way TCP relay traffic,
 restart persistence and owned-process cleanup. Real gameplay remains a separate two-player test.
+
+The UDP transport also keeps using a direct peer that answered when no peer relay traffic has
+arrived. Previously the default forced-relay policy immediately undid OnReceive's switch back
+to direct and suppressed subsequent direct packets. A production-source regression reproduces
+that failure, checks repeated direct sends, and verifies that real relayed peer traffic still
+switches to the working relay. First direct replies are recorded in the BBSC timeline.

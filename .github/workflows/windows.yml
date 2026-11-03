@@ -75,6 +75,9 @@ jobs:
             mingw-w64-clang-x86_64-python
             mingw-w64-clang-x86_64-qt6-base
             mingw-w64-clang-x86_64-qt6-httpserver
+      - name: Check production UDP relay routing
+        shell: msys2 {0}
+        run: BB_TEST_CXX=clang++ bash tests/test_p2p_relay.sh
       - name: Verify and restore successful native build
         id: native-source
         shell: bash

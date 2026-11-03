@@ -10,7 +10,8 @@ libs=()
 extra=()
 case "$(uname -s)" in
   MINGW*|MSYS*)
-    platform=(-Igpu/platform/win32/include -Igpu/third_party/wepoll)
+    platform=(-Igpu/platform/win32/include -Igpu/third_party/wepoll
+              -mno-ms-bitfields -include gpu/platform/win32/include/bbport_win32.h)
     libs=(-lws2_32)
     "${BB_TEST_CC:-clang}" -c gpu/third_party/wepoll/wepoll.c -o "$work/wepoll.o"
     # PE linkers resolve references before discarding sections: link the complete native

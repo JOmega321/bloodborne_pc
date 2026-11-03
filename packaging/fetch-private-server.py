@@ -30,7 +30,10 @@ def main():
     folder = target / 'BBSC-0.0.2-Server-Linux'
     with tarfile.open(folder / 'shadnet-src.tar.gz') as source:
         source.extractall(target, filter='data')
-    subprocess.run(['git', 'apply', str(Path(__file__).resolve().parent / 'private-server-system-protobuf.patch')],
+    # Git for Windows checks patches out as CRLF; send normalized bytes without text-mode
+    # stdin conversion so the immutable LF source is patched consistently.
+    patch = (Path(__file__).resolve().parent / 'private-server-system-protobuf.patch').read_text()
+    subprocess.run(['git', 'apply', '-'], input=patch.encode('utf-8'),
                    cwd=target / 'shadnet-src', check=True)
     print('Verified official BBSC 0.0.2 server source; using matched system protobuf.')
 

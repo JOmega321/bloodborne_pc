@@ -16,7 +16,7 @@ os.chdir(root)
 stage = root / "dist" / "bbglorp-windows"
 shutil.rmtree(stage, ignore_errors=True)
 stage.parent.mkdir(exist_ok=True)
-hidden = "argparse base64 bisect collections contextlib glob hashlib json math re shutil struct tempfile zlib io runpy xml.etree.ElementTree ctypes.wintypes socket urllib.request urllib.error http.server socketserver secrets uuid traceback datetime threading".split()
+hidden = "argparse base64 bisect collections contextlib glob hashlib json math re shutil struct tempfile zlib io runpy xml.etree.ElementTree ctypes.wintypes socket ipaddress urllib.request urllib.error http.server socketserver secrets uuid traceback datetime threading".split()
 command = [sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", "--console",
            "--name", "bbport-run", "--icon", str(root / "packaging/bbport.ico"),
            "--distpath", str(stage.parent), "--workpath", str(root / "out/windows/pyi-work"),
@@ -33,6 +33,19 @@ subprocess.run(["dotnet", "publish", "launcher/windows", "-c", "Release", "-r", 
 shutil.copy2("out/windows/wpf/bbglorp.exe", stage)
 (stage / "bin").mkdir()
 (stage / "online").mkdir()
+private = stage / "private-server"
+private.mkdir()
+shutil.copy2(root / "out/windows/private-server-build/shadnet.exe", private)
+for name in ("worlds.cfg", "scoreboards.cfg"):
+    shutil.copy2(root / ".deps/bbsc/shadnet-src" / name, private)
+licenses = private / "licenses"
+licenses.mkdir()
+for name in ("LICENSE.txt", "NOTICE.txt", "CREDITS.txt"):
+    shutil.copy2(root / ".deps/bbsc/BBSC-0.0.2-Server-Linux" / name, licenses)
+(licenses / "SOURCE.txt").write_text(
+    "BBSC 0.0.2 source: https://github.com/CLSAMG22/BBSC/releases/tag/v0.0.2\n"
+    "shadNet and protobuf: source in BBSC-0.0.2-Server-Linux.zip, checksum pinned by packaging.\n"
+    "Qt runtime: https://packages.msys2.org/ and https://download.qt.io/archive/qt/\n", encoding="utf-8")
 for name in ("bb-probe.exe", "bb-gpu-capabilities.exe"):
     shutil.copy2(root / "out/windows/native" / name, stage / "bin")
 shutil.copy2(root / "out/windows/native/bbnet20.dll", stage / "online")
@@ -53,8 +66,19 @@ subprocess.run([sys.executable, "packaging/verify-dlss.py", str(stage / "bin"),
 msys = Path(os.environ["CLANG64_BIN"])
 source = {p.name.lower(): p for p in msys.glob("*.dll")}
 system = Path(os.environ["SystemRoot"]) / "System32"
-for folder in (stage / "bin", stage / "online"):
-    queue = list(folder.glob("*"))
+# Qt's SQLite plugin is loaded dynamically, so verify its dependencies as well.
+plugin = msys.parent / "share/qt6/plugins/sqldrivers/qsqlite.dll"
+if not plugin.exists():
+    plugin = msys.parent / "lib/qt6/plugins/sqldrivers/qsqlite.dll"
+if not plugin.exists():
+    raise RuntimeError("Missing Qt SQLite plugin for private server")
+(private / "plugins/sqldrivers").mkdir(parents=True)
+shutil.copy2(plugin, private / "plugins/sqldrivers/qsqlite.dll")
+(private / "qt.conf").write_text("[Paths]\nPlugins=plugins\n", encoding="utf-8")
+for license_dir in (msys.parent / "share/licenses").glob("qt6-*"):
+    shutil.copytree(license_dir, licenses / license_dir.name, dirs_exist_ok=True)
+for folder in (stage / "bin", stage / "online", private):
+    queue = [p for p in folder.rglob("*") if p.suffix.lower() in (".exe", ".dll")]
     seen = set()
     while queue:
         path = queue.pop()

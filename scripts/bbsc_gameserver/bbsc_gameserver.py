@@ -141,7 +141,7 @@ def _build_ss_info(local, bbhost=False):
 
     # 2. everything else -> this process. The template ships pointing at 127.0.0.1:20443; if we
     #    are listening somewhere else, move them with it.
-    here = "http://127.0.0.1:{}".format(ARGS.port) if local else \
+    here = "http://{}:{}".format(ARGS.host if ARGS.host != "0.0.0.0" else "127.0.0.1", ARGS.port) if local else \
         "http://{}:{}".format(ARGS.advertise or ARGS.host, ARGS.port)
     if here != "http://127.0.0.1:20443":
         xml = xml.replace("http://127.0.0.1:20443", here)
@@ -1060,7 +1060,7 @@ class QuietHTTPServer(ThreadingHTTPServer):
 def _bbhost_ss_info(b64, local):
     """build_ss_info points bbhost summons at 127.0.0.1:20443; move them to where this server is."""
     xml = base64.b64decode(b64).decode("utf-8")
-    here = "http://127.0.0.1:{}".format(ARGS.port) if local else \
+    here = "http://{}:{}".format(ARGS.host if ARGS.host != "0.0.0.0" else "127.0.0.1", ARGS.port) if local else \
         "http://{}:{}".format(ARGS.advertise or ARGS.host, ARGS.port)
     return base64.b64encode(xml.replace("http://127.0.0.1:20443", here).encode("utf-8"))
 

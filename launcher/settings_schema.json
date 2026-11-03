@@ -2388,6 +2388,31 @@
       "ru": "У всех в сессии должны быть одна версия игры (1.09) и один сервер. Читы меняют игру и для других игроков: выключайте их при совместной игре.",
       "en": "Everyone in a session needs the same game version (1.09) and the same server. Cheats change the game for the other players too: turn them off in co-op."
      }
+    },
+    {
+     "key": "private_host",
+     "type": "special",
+     "store": "settings",
+     "default": "",
+     "platforms": [
+      "windows"
+     ],
+     "group": {
+      "en": "Host private server",
+      "ru": "Host private server"
+     },
+     "title": {
+      "en": "Host private server",
+      "ru": "Host private server"
+     },
+     "description": {
+      "en": "Host for friends on the same LAN or virtual LAN. Keep this launcher open while hosting. Only the host starts a server. Your firewall must allow the private network.",
+      "ru": "Host for friends on the same LAN or VPN. Keep this launcher open while hosting."
+     },
+     "visible_when": {
+      "key": "online_pool",
+      "value": "seamless"
+     }
     }
    ]
   },

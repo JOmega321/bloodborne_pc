@@ -57,6 +57,7 @@ jobs:
           /tmp/hook-ranges-test
           python3 -m compileall -q launcher
           python3 -m unittest discover -s tests -p test_online_status.py
+          python3 -m unittest discover -s tests -p test_private_server.py
           python3 -m unittest discover -s tests -p test_launcher_gpu.py
       - uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
@@ -114,6 +115,8 @@ jobs:
           package=$(readlink -f out/nix-roots/bbport)
           nix-shell --run "python3 packaging/verify-dlss.py '$package/share/bbport/bin' --license-dir '$package/share/bbport'"
           nix-shell --run "python3 packaging/verify-online.py '$package/share/bbport'"
+          nix-shell --run "python3 packaging/verify-private-server.py '$package/share/bbport'"
+          nix-shell -p 'python3.withPackages (p: [ p.pygobject3 ])' gtk4 libadwaita gobject-introspection --run "xvfb-run -a python3 packaging/verify-host-ui.py '$package/share/bbport'"
       - name: Check final AppImage CLI and launcher startup
         run: bash packaging/verify-appimage.sh "$APPIMAGE_FILE"
       - name: Upload verified AppImage

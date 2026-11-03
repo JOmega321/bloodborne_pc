@@ -31,6 +31,7 @@ let
       in builtins.elem rel wanted || builtins.elem rel dlssFiles || isNgx rel
         || lib.any (dir: lib.hasPrefix (dir + "/") rel) assetDirs;
   };
+  privateServer = import ./private-server.nix { inherit pkgs; };
   python = pkgs.python3.withPackages (ps: [ ps.pygobject3 ]);
   # FSR 4.1.1 from the user's own AMD DLL (the launcher's button, tools/fsr4cap/build_assets.sh):
   # its two tools built here, so that the package needs no compiler and no network for it. Proton
@@ -168,7 +169,10 @@ pkgs.stdenv.mkDerivation {
   installPhase = ''
     runHook preInstall
     d=$out/share/bbport
-    mkdir -p $d/bin $out/bin
+    mkdir -p $d/bin $out/bin $d/private-server
+    ln -s ${privateServer}/bin/shadnet $d/private-server/shadnet
+    cp ${privateServer}/bin/{worlds.cfg,scoreboards.cfg} $d/private-server/
+    cp -r ${privateServer}/share/licenses $d/private-server/
     cp run.sh VERSION LICENSE NOTICE $d/
     # The recorded game's shader recipes (gpu/render/shader_rebuild.h; no game code in them).
     if [ -f shader_recipes.bin ]; then cp shader_recipes.bin $d/; fi

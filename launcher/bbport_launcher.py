@@ -14,12 +14,13 @@ from bbport_launcher_common import *  # noqa: F401,F403
 from bbport_launcher_content import ContentPages
 from bbport_launcher_log import LogPage
 from bbport_launcher_online import OnlinePage
+from bbport_launcher_host import HostPage
 from bbport_launcher_trophies import TrophiesPage
 from bbport_launcher_upscalers import UpscalerFiles
 
 
 # The window's pages and lists live in the bbport_launcher_*.py modules (mixins).
-class LauncherWindow(ContentPages, OnlinePage, TrophiesPage, LogPage, UpscalerFiles,
+class LauncherWindow(ContentPages, OnlinePage, HostPage, TrophiesPage, LogPage, UpscalerFiles,
                      Adw.ApplicationWindow):
     def __init__(self, app):
         super().__init__(application=app, title="Bloodborne (bbglorp)")
@@ -1003,6 +1004,13 @@ class LauncherWindow(ContentPages, OnlinePage, TrophiesPage, LogPage, UpscalerFi
 
     def on_close(self, _window):
         self.store()
+        host = self.stop_private_host()
+        if host:
+            try:
+                host.wait(timeout=15)
+            except subprocess.TimeoutExpired:
+                host.terminate()
+                host.wait(timeout=15)
         if self.process:
             self.stop_game()
         if self.fsr411_build:

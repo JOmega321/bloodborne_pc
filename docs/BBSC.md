@@ -108,3 +108,31 @@ its hooks (`BB_ONLINE=1 BB_BBSC=1`, 2026-10-16).
 Seamless Hunt's own releases (BBSC 0.0.1) fixed items not showing, death and respawn, sign
 targeting and the relay framing inside `bbsc.dll` (a Windows mod for shadPS4/BBport); that source
 is not published, so those fixes are not here.
+
+## bbglorp private hosting
+
+Online → Host private server manages shadNet (TCP 31313, UDP 31314 and WebAPI TCP 31315),
+the game server (TCP 20443) and BBSC's TCP 20444 relay. The server source is pinned to the
+checksum-verified official BBSC 0.0.2 Linux server archive; both platforms compile it natively.
+No root installer or system service is run. The selected IPv4 address must belong to this PC's
+LAN or virtual LAN. The launcher does not change the firewall or install a VPN.
+
+Only one player starts the private server. Keep their launcher open; starting/stopping the game
+keeps the private server running. Stop server or closing the launcher stops its owned services.
+Accounts, the registration key and logs live in `<save folder>/private-server/`, outside the
+AppImage/package. An existing local helper on the same address/ports must be stopped first.
+
+Both players select the host's address with Use address, which sets all three server fields,
+enables BBSC and online, disables the offline-choice patch and turns off UPnP for LAN/VPN.
+Create an account using the Online ID/password fields and an email. Public-server accounts are
+separate. The host's registration key is filled on startup; Copy details includes it when filled,
+so share those details privately. A joining friend enters that key to register their own account.
+Use the same in-game Network password, host Hunt Bell and guest Kin Bell. The live log's READY
+means local service checks passed; it does not establish that a friend's firewall/VPN connection
+or two-player gameplay succeeds. Use matching bbglorp builds on both PCs.
+
+The HTTP fallback's loopback address is separate from the shared BBSC relay (`BBSC_RELAY`).
+The launcher pins that relay before changing the HTTP server address and logs its endpoint.
+The guest-hook installer also tracks exact byte ranges, allowing adjacent summon callbacks.
+Packaging tests cover registration/key rejection, password matching, two-way TCP relay traffic,
+restart persistence and owned-process cleanup. Real gameplay remains a separate two-player test.

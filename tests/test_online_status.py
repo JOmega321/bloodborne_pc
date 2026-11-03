@@ -72,6 +72,10 @@ class OnlineStatusTests(unittest.TestCase):
             for section in ('msg', 'BetaTestWebUrl'):
                 for lang in range(22):
                     self.assertIsNotNone(root.find(f'{section}{region}/lang{lang}'))
+        server.ARGS.host = '100.64.12.3'
+        private_xml = ET.fromstring('<root>' + base64.b64decode(
+            server.build_ss_info(local=True, quiet=True)).decode() + '</root>')
+        self.assertEqual(private_xml.findtext('gameurl1/api_Login'), 'http://100.64.12.3:20443')
         with self.reply(data):
             self.assertTrue(online.game_status('http://127.0.0.1')[0])
 

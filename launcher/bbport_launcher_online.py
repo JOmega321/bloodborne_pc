@@ -107,6 +107,8 @@ class OnlinePage:
         self.test_rows = []
         self.connection_group = connection
         page.add(connection)
+        self.private_host_group = self.build_host_group()
+        page.add(self.private_host_group)
         self.pool_row.connect("notify::selected", self.on_pool_changed)
         self.on_pool_changed()
         return page
@@ -117,6 +119,7 @@ class OnlinePage:
     def on_pool_changed(self, *_):
         pool = self.online_pool()
         legacy, thd = pool == "seamless", pool == "huntersdream"
+        self.private_host_group.set_visible(not thd)
         self.game_group.set_visible(not thd)
         self.coop_group.set_visible(not thd)
         self.account_group.set_visible(not thd)

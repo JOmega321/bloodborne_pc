@@ -20,6 +20,7 @@ jobs:
       - name: Check launcher and online regressions
         run: |
           python -m unittest discover -s tests -p test_online_status.py
+          python -m unittest discover -s tests -p test_private_server.py
           python -m unittest discover -s tests -p test_launcher_gpu.py
       - name: Fetch pinned NVIDIA DLSS SDK
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
@@ -72,6 +73,8 @@ jobs:
             mingw-w64-clang-x86_64-nlohmann-json
             mingw-w64-clang-x86_64-miniupnpc
             mingw-w64-clang-x86_64-python
+            mingw-w64-clang-x86_64-qt6-base
+            mingw-w64-clang-x86_64-qt6-httpserver
       - name: Verify and restore successful native build
         id: native-source
         shell: bash
@@ -136,6 +139,13 @@ jobs:
       - name: Build DLSS bridge with NVIDIA-compatible MSVC runtime
         shell: pwsh
         run: ./packaging/windows/build-dlss.ps1
+      - name: Fetch checksum-pinned private server source
+        run: python packaging/fetch-private-server.py .deps/bbsc
+      - name: Build private matchmaking server
+        shell: msys2 {0}
+        run: |
+          cmake -S .deps/bbsc/shadnet-src -B out/windows/private-server-build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
+          cmake --build out/windows/private-server-build --parallel 2 --target shadnet
       - name: Freeze Python runner and publish WPF launcher
         shell: pwsh
         run: |
@@ -144,6 +154,7 @@ jobs:
           python -m pip install pyinstaller==6.16.0 pefile==2023.2.7
           python packaging/windows/package-native.py
           python packaging/verify-online.py dist/bbglorp-windows --runner dist/bbglorp-windows/bbport-run.exe
+          python packaging/verify-private-server.py dist/bbglorp-windows --runner dist/bbglorp-windows/bbport-run.exe
       - name: Preserve package candidate
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:

@@ -106,7 +106,12 @@ public partial class MainWindow : Window
         var version = Path.Combine(Store.PackageDir, "VERSION");
         VersionText.Text = File.Exists(version) ? "bbglorp " + File.ReadAllText(version).Trim() : "bbglorp";
         ApplyLanguage();
-        Closing += (_, _) => store.Save();
+        Closing += (_, _) => {
+            store.Save();
+            var child = privateHost;
+            StopPrivateHost();
+            if (child is not null && !child.WaitForExit(15000)) child.Kill(entireProcessTree: true);
+        };
         SourceInitialized += (_, _) => DarkTitleBar();
     }
 
@@ -484,6 +489,8 @@ public partial class MainWindow : Window
                 return GamepadCard(item);
             case "thd_account":
                 return ThdAccountCard(item); // Online.cs
+            case "private_host":
+                return PrivateHostCard(item);
             case "online_test":
                 return OnlineTestCard(item);
             case "mods":

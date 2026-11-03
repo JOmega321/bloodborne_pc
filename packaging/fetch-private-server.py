@@ -4,6 +4,7 @@
 import hashlib
 from pathlib import Path
 import sys
+import subprocess
 import tarfile
 import urllib.request
 import zipfile
@@ -29,7 +30,9 @@ def main():
     folder = target / 'BBSC-0.0.2-Server-Linux'
     with tarfile.open(folder / 'shadnet-src.tar.gz') as source:
         source.extractall(target, filter='data')
-    print('Verified official BBSC 0.0.2 server source.')
+    subprocess.run(['git', 'apply', str(Path(__file__).resolve().parent / 'private-server-system-protobuf.patch')],
+                   cwd=target / 'shadnet-src', check=True)
+    print('Verified official BBSC 0.0.2 server source; using matched system protobuf.')
 
 
 if __name__ == '__main__':

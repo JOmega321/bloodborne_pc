@@ -2,6 +2,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstring>
 #include <span>
 
 namespace Libraries::Np::NpSignaling {
@@ -22,6 +23,24 @@ inline PacketEnvelope ClassifyPacketEnvelope(std::span<const std::uint8_t> packe
         return PacketEnvelope::StunEcho;
     }
     return PacketEnvelope::Invalid;
+}
+
+// BBSC life state: "SHAD" 0x23 + u32 player + u8 dead + u32 sequence, sent twice a second by every
+// player in a session, the host and its guests alike.
+struct BbscLifeReport {
+    std::uint32_t player = 0;
+    std::uint8_t dead = 0;
+    std::uint32_t sequence = 0;
+};
+
+inline bool ParseBbscLifePacket(std::span<const std::uint8_t> packet, BbscLifeReport& report) {
+    if (packet.size() < 14 || std::memcmp(packet.data(), "SHAD", 4) != 0 || packet[4] != 0x23) {
+        return false;
+    }
+    std::memcpy(&report.player, packet.data() + 5, 4);
+    report.dead = packet[9];
+    std::memcpy(&report.sequence, packet.data() + 10, 4);
+    return true;
 }
 
 } // namespace Libraries::Np::NpSignaling

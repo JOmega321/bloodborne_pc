@@ -85,6 +85,16 @@ Differences from BBSC's own builds:
   `signaling_handler.cpp` carry the port's own branches. PR #39 keeps a joining guest's screen black
   until the guest is placed beside the host.
 
+- 2026-11-04, life packets ("SHAD" 0x23). The port sent them but neither `signaling_handler.cpp` nor
+  `bbsc_relay_client.cpp` received them; only BBSC's mod relay did. A guest therefore went by its
+  local copy of the host, which can keep HP above 0 while the host is dead, never saw the wipe or
+  the host's return, and waited for a boss kill (reported: guest stuck spectating after a wipe, with
+  PR #9 in the build). Both paths now receive them; the relay takes them only from our own session.
+  This also changes every other check of a partner's life, such as non-boss deaths and the host's
+  wipe. Packet parsing has a unit test; no two-player test yet, so this is not known to fix it. Both
+  players need this build. The guest's "An item was added to your items." notice was also removed;
+  drops are still added and logged.
+
 ## Checks
 
 `out/dev/verify/verify.sh NAME BB_ONLINE=1 BB_BBSC=1`: loads the save offline-capable, 14 self-tests

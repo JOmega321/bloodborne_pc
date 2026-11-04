@@ -15,9 +15,10 @@
 //
 // Sending: every BBSC packet the emulator sends to its signaling peers goes to the relay as well
 // (np_signaling_helpers.cpp). Receiving: frames from the relay go to the same handlers the mod
-// uses, with two limits that keep two emulator builds exactly as before - a guest ignores the
-// relay while BBSC packets arrive over the signaling (its host is an emulator build), and life
-// packets ("SHAD" 0x23) stay unhandled as the emulator's signaling receive always did.
+// uses, except that a guest ignores the host's packets on the relay while BBSC packets arrive over
+// the signaling (its host is an emulator build). Life packets ("SHAD" 0x23) come from every player
+// of our session and are taken from both paths: without them nobody could tell a dead partner from
+// its local copy, and a guest stayed spectating after a boss wipe.
 
 #include "core/bbsc_relay_client.h"
 
@@ -39,6 +40,7 @@
 #include "core/bbsc_persistence.h"
 #include "core/bloodborne_re.h"
 #include "core/libraries/np/np_signaling/np_signaling_bbsc.h"
+#include "core/libraries/np/np_signaling/np_signaling_packet.h"
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -64,6 +66,7 @@ namespace {
 
 constexpr std::uint16_t DefaultRelayPort = 20444;
 constexpr std::uint8_t FollowType = 0x20;
+constexpr std::uint8_t LifeType = 0x23;
 constexpr std::uint8_t ScaleType = 0x24;
 constexpr std::uint8_t PvpType = 0x25;
 constexpr std::uint8_t ProgressType = 0x26;
@@ -292,6 +295,15 @@ void Dispatch(const std::vector<std::uint8_t>& wrapped) {
         // A guest asks its host (us) for PvP on/off.
         if (state == 3 && session == own_id) {
             Core::Bloodborne::OnBbscPvpPacket(frame[5], frame[6]);
+        }
+        return;
+    }
+    if (type == LifeType) {
+        // From anyone in our own session (same host): the host needs its guests' reports too.
+        Libraries::Np::NpSignaling::BbscLifeReport life{};
+        if (session != 0 && session == SessionKey() &&
+            Libraries::Np::NpSignaling::ParseBbscLifePacket(frame, life)) {
+            Core::Bloodborne::OnBbscLifePacket(life.player, life.dead, life.sequence);
         }
         return;
     }

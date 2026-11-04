@@ -206,16 +206,31 @@ fi
 # showed doubled, offset text: the Steam Deck's performance overlay (mangoapp, game mode) plus the
 # in-game layer, or the AppImage's bundled layer plus a system MangoHud (the layer names differ,
 # so the Vulkan loader loads both).
+# In the package (its XDG_DATA_DIRS names the bundled MangoHud's share) the bundled layer is the one
+# kept and the host's are disabled by name: a host libMangoHud.so is built against the host's libc,
+# spdlog and fmt (Fedora 0.8.2 wants libspdlog.so.1.15, the package has 1.17), cannot be loaded into
+# the package's own glibc, and the Vulkan loader then skips it silently: no overlay at all. Run from
+# source there is only the host's layer, and nothing is disabled.
 if [[ ${MANGOHUD:-0} == 1 ]]; then
     if pgrep -x mangoapp > /dev/null 2>&1; then
         echo "MangoHud: Steam's performance overlay is on; the in-game MangoHud stays off"
         unset MANGOHUD
         export DISABLE_MANGOHUD=1
-    elif grep -qs '"VK_LAYER_MANGOHUD' /usr/share/vulkan/implicit_layer.d/*.json \
-            /etc/vulkan/implicit_layer.d/*.json \
-            "${XDG_DATA_HOME:-$HOME/.local/share}"/vulkan/implicit_layer.d/*.json; then
-        # The system's own MangoHud (and its config) is used; the bundled one is skipped.
-        export VK_LOADER_LAYERS_DISABLE=${VK_LOADER_LAYERS_DISABLE:+$VK_LOADER_LAYERS_DISABLE,}VK_LAYER_MANGOHUD_overlay_64_x86_64
+    elif [[ -n ${BB_PREBUILT:-} && ${XDG_DATA_DIRS:-} == *-mangohud-*/share* ]]; then
+        host_manifests=()
+        IFS=: read -r -a data_dirs <<< "$XDG_DATA_DIRS"
+        for dir in "${XDG_DATA_HOME:-$HOME/.local/share}" "${data_dirs[@]}"; do
+            [[ -z $dir || $dir == *-mangohud-*/share ]] && continue
+            host_manifests+=("$dir"/vulkan/implicit_layer.d/*.json)
+        done
+        host_manifests+=(/etc/vulkan/implicit_layer.d/*.json)
+        host_layers=$(grep -sho '"VK_LAYER_MANGOHUD[^"]*"' "${host_manifests[@]}" | tr -d '"' \
+            | grep -vx VK_LAYER_MANGOHUD_overlay_64_x86_64 | sort -u | paste -sd, -) || true
+        if [[ -n $host_layers ]]; then
+            echo "MangoHud: the package's own is used; the host's ($host_layers) cannot load here"
+            export VK_LOADER_LAYERS_DISABLE=${VK_LOADER_LAYERS_DISABLE:+$VK_LOADER_LAYERS_DISABLE,}$host_layers
+        fi
+        unset host_manifests data_dirs dir host_layers
     fi
 fi
 # The command buffers of each submission are copied when the game submits them and decoded from

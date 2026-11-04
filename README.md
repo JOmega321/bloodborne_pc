@@ -384,7 +384,10 @@ A user reported successful startup with FSR 3 on a GTX 1060 6GB (Fedora 44, NVID
 
 MangoHud is bundled in the AppImage; enable its checkbox in the launcher. If MangoHud is also
 installed system-wide, or Steam's performance overlay is on (Steam Deck game mode), only one
-overlay is drawn (two drew doubled, offset text).
+overlay is drawn (two drew doubled, offset text): the AppImage always uses its own MangoHud and
+turns the host's layer off, because a host `libMangoHud.so` needs the host's spdlog/fmt versions and
+cannot load inside the AppImage (the overlay then never appeared). It still reads
+`~/.config/MangoHud/MangoHud.conf`.
 When running from source, install MangoHud separately. A diagnostic launch with
 `VK_LOADER_LAYERS_DISABLE=~implicit~` also disables MangoHud.
 

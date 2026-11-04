@@ -78,6 +78,13 @@ Differences from BBSC's own builds:
   `bbsc.dll` of that release (death and respawn, sign targeting, relay TCP framing) have no
   published source yet; they come in when BBSC publishes it.
 
+- 2026-11-03, two unmerged BBSC pull requests, on top of 0.0.2. Neither has had a two-player test
+  in this port. PR #9 covers guest failures in boss wipes, and may address BBSC issue #44 (guest stuck
+  spectating); it adds relay/signaling packet "SHAD" 0x2B for the host's bloodstain, so both players
+  need this build. The PR only added the mod relay's receive, so `bbsc_relay_client.cpp` and
+  `signaling_handler.cpp` carry the port's own branches. PR #39 keeps a joining guest's screen black
+  until the guest is placed beside the host.
+
 ## Checks
 
 `out/dev/verify/verify.sh NAME BB_ONLINE=1 BB_BBSC=1`: loads the save offline-capable, 14 self-tests
@@ -111,6 +118,21 @@ is not published, so those fixes are not here.
 
 ## bbglorp private hosting
 
+Online → Join private server, above the Host section, is for the player connecting to a friend:
+their address, Test connection, Use this server, and the registration key, email and Create account.
+The test (`scripts/private_server.py check`) performs a shadNet handshake, a real UDP STUN ping,
+WebAPI `/status`, the game's `ss.info` check and a relay TCP connect, in parallel with one deadline.
+A pass shows only that those services answer from this PC. It does not show that two-player gameplay
+works. Run from the host's own address it also skips the firewall, and the result says so; only a run
+from the friend's PC tests their route.
+
+Security limits of private hosting: shadNet logins and registration use unencrypted TCP, and the
+host's server receives the password, so use one that is used nowhere else. The relay on TCP 20444
+has no authentication and its sender ids are written by clients, so anyone who can reach that port
+can read and forge session frames. Changing that would break compatibility with BBSC's protocol.
+Keep these ports on a LAN or VPN; Start warns when the address is public. The game server caps
+request bodies at 1 MiB and the relay at 16 connections.
+
 Online → Host private server manages shadNet (TCP 31313, UDP 31314 and WebAPI TCP 31315),
 the game server (TCP 20443) and BBSC's TCP 20444 relay. The server source is pinned to the
 checksum-verified official BBSC 0.0.2 Linux server archive; both platforms compile it natively.
@@ -122,11 +144,12 @@ keeps the private server running. Stop server or closing the launcher stops its 
 Accounts, the registration key and logs live in `<save folder>/private-server/`, outside the
 AppImage/package. An existing local helper on the same address/ports must be stopped first.
 
-Both players select the host's address with Use address, which sets all three server fields,
-enables BBSC and online, disables the offline-choice patch and turns off UPnP for LAN/VPN.
-Create an account using the Online ID/password fields and an email. Public-server accounts are
-separate. The host's registration key is filled on startup; Copy details includes it when filled,
-so share those details privately. A joining friend enters that key to register their own account.
+The host presses Use address and a friend presses Use this server. Both set all three server fields,
+enable BBSC and online, disable the offline-choice patch and turn off UPnP for LAN/VPN.
+Create an account in the Join section using the Online ID/password fields and an email. Public-server
+accounts are separate. On startup the host's address and registration key are filled into the Join
+section. Copy details includes the key while hosting, so share those details privately. A joining
+friend enters that key to register their own account.
 Use the same in-game Network password, host Hunt Bell and guest Kin Bell. The live log's READY
 means local service checks passed; it does not establish that a friend's firewall/VPN connection
 or two-player gameplay succeeds. Use matching bbglorp builds on both PCs.

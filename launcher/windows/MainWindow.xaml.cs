@@ -489,6 +489,8 @@ public partial class MainWindow : Window
                 return GamepadCard(item);
             case "thd_account":
                 return ThdAccountCard(item); // Online.cs
+            case "private_join":
+                return PrivateJoinCard(item);
             case "private_host":
                 return PrivateHostCard(item);
             case "online_test":

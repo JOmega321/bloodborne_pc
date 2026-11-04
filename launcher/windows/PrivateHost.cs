@@ -22,6 +22,25 @@ public partial class MainWindow
     private string privateHostData = "";
     private Action<string>? privateHostOutput;
     private Action? privateHostRefresh;
+    private string privateJoinKey = "";
+    private Action? privateJoinRefresh;
+
+    private static string PrivateAddress(string text, string complaint)
+    {
+        if (!IPAddress.TryParse(text.Trim(), out var ip) || ip.AddressFamily != AddressFamily.InterNetwork ||
+            ip.Equals(IPAddress.Any) || ip.GetAddressBytes()[0] >= 224)
+            throw new InvalidOperationException(complaint);
+        return ip.ToString();
+    }
+
+    private void SelectPrivateServer(string host)
+    {
+        store.Set("private_join_address", host);
+        store.Set("online", "1"); store.Set("online_bbsc", "1"); store.Set("online_pool", "seamless");
+        store.Set("skip_network_choice", "0"); store.Set("online_upnp", "0");
+        store.Set("online_community", "http://" + host); store.Set("online_server", host + ":31313");
+        store.Set("online_webapi", "http://" + host + ":31315"); store.Save();
+    }
 
     private string PrivateHostState => Path.Combine(
         store.Get("user_dir") is { Length: > 0 } user ? user : Path.Combine(Store.DataDir, "user"), "private-server");
@@ -49,6 +68,99 @@ public partial class MainWindow
         }
     }
 
+    private Border PrivateJoinCard(JsonObject item)
+    {
+        var panel = new StackPanel();
+        var address = new TextBox { Text = store.Get("private_join_address"), Margin = new Thickness(0, 4, 0, 8) };
+        panel.Children.Add(new TextBlock { Text = "Host’s IPv4 address" });
+        panel.Children.Add(address);
+        var results = new StackPanel { Margin = new Thickness(0, 0, 0, 8) };
+        var status = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8) };
+        // Plain TextBlock text: anything here may come from the remote server.
+        void Result(string text) =>
+            results.Children.Add(new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 2) });
+        void Say(string text) {
+            status.Text = text;
+            privateHostOutput?.Invoke(text);
+        }
+        var actions = new StackPanel { Orientation = Orientation.Horizontal };
+        Button AddButton(StackPanel parent, string title) {
+            var button = new Button { Content = title, Margin = new Thickness(0, 0, 6, 6), Padding = new Thickness(10, 5, 10, 5) };
+            parent.Children.Add(button);
+            return button;
+        }
+        var test = AddButton(actions, "Test connection");
+        test.Click += async (_, _) => {
+            test.IsEnabled = false;
+            test.Content = "Testing…";
+            results.Children.Clear();
+            try {
+                var host = PrivateAddress(address.Text, "Enter the host’s IPv4 address, for example 100.64.1.2.");
+                store.Set("private_join_address", host);
+                store.Save();
+                using var child = Process.Start(PrivateTool("check", host)) ?? throw new IOException("Could not start the connection test.");
+                child.StandardInput.Close();
+                var output = child.StandardOutput.ReadToEndAsync();
+                var error = child.StandardError.ReadToEndAsync();
+                await child.WaitForExitAsync();
+                var failure = (await error).Trim();
+                if (child.ExitCode != 0) throw new IOException(failure.Length > 0 ? failure : "The connection test failed.");
+                foreach (var line in (await output).Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) {
+                    if (JsonNode.Parse(line) is not JsonObject result) continue;
+                    if (result["summary"]?.GetValue<string>() is { } summary) { Result(summary); continue; }
+                    var ok = result["ok"]?.GetValue<bool>() == true;
+                    var detail = string.Join(" ", new[] { result["detail"]?.GetValue<string>(), result["hint"]?.GetValue<string>() }
+                        .Where(part => !string.IsNullOrEmpty(part)));
+                    Result((ok ? "✓ " : "✗ ") + result["label"]?.GetValue<string>() + (ok ? "" : ": " + detail));
+                }
+            } catch (Exception error) { Result("FAILED: " + error.Message); }
+            finally { test.IsEnabled = true; test.Content = "Test connection"; }
+        };
+        var use = AddButton(actions, "Use this server");
+        use.Click += (_, _) => {
+            try {
+                SelectPrivateServer(PrivateAddress(address.Text, "Enter the host’s IPv4 address, for example 100.64.1.2."));
+                var message = "Private-server connection selected. Each player needs an account on this server.";
+                if (store.Get("online_password").Length > 0)
+                    message += " The game sends your Online ID password to this server, unencrypted. Use one you use nowhere else.";
+                privateHostOutput?.Invoke(message);
+                Dispatcher.BeginInvoke(() => { if (shownSection is not null) BuildSection(shownSection); });
+            } catch (Exception error) { Say("FAILED: " + error.Message); }
+        };
+        panel.Children.Add(actions);
+        panel.Children.Add(results);
+        var key = new PasswordBox { Password = privateJoinKey, Margin = new Thickness(0, 4, 0, 8) };
+        key.PasswordChanged += (_, _) => privateJoinKey = key.Password;
+        panel.Children.Add(new TextBlock { Text = "Private server registration key (shared privately by the host)" });
+        panel.Children.Add(key);
+        var email = new TextBox { Margin = new Thickness(0, 4, 0, 8) };
+        panel.Children.Add(new TextBlock { Text = "Account email — uses the Online ID and password entered above" });
+        panel.Children.Add(email);
+        panel.Children.Add(new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8), Text =
+            "Use a password you use nowhere else: it is sent unencrypted and the host’s server receives it." });
+        var accounts = new StackPanel { Orientation = Orientation.Horizontal };
+        var create = AddButton(accounts, "Create account");
+        create.Click += async (_, _) => {
+            create.IsEnabled = false;
+            try {
+                var info = PrivateTool("register", PrivateAddress(address.Text, "Enter the host’s IPv4 address, for example 100.64.1.2."));
+                using var child = Process.Start(info) ?? throw new IOException("Could not start account tool.");
+                var output = child.StandardOutput.ReadToEndAsync(); var error = child.StandardError.ReadToEndAsync();
+                await child.StandardInput.WriteLineAsync(JsonSerializer.Serialize(new {
+                    name = store.Get("online_npid"), password = store.Get("online_password"), email = email.Text.Trim(), key = key.Password }));
+                child.StandardInput.Close();
+                await child.WaitForExitAsync();
+                Say((await output + await error).Trim());
+            } catch (Exception error) { Say("FAILED: " + error.Message); }
+            finally { create.IsEnabled = true; }
+        };
+        panel.Children.Add(accounts);
+        panel.Children.Add(status);
+        // The host's READY fills these, so the host can make their own account here.
+        privateJoinRefresh = () => { address.Text = store.Get("private_join_address"); key.Password = privateJoinKey; };
+        return Card(item, panel, wide: true).Card;
+    }
+
     private Border PrivateHostCard(JsonObject item)
     {
         var panel = new StackPanel();
@@ -69,12 +181,7 @@ public partial class MainWindow
             log.ScrollToEnd();
             if (text.StartsWith("FAILED:")) status.Text = text;
         }
-        string Host() {
-            if (!IPAddress.TryParse(address.Text.Trim(), out var ip) || ip.AddressFamily != AddressFamily.InterNetwork ||
-                ip.Equals(IPAddress.Any) || ip.GetAddressBytes()[0] >= 224)
-                throw new InvalidOperationException("Enter this PC’s LAN or VPN IPv4 address.");
-            return ip.ToString();
-        }
+        string Host() => PrivateAddress(address.Text, "Enter this PC’s LAN or VPN IPv4 address.");
         Button Button(string title, StackPanel parent, Action clicked) {
             var button = new Button { Content = title, Margin = new Thickness(0, 0, 6, 6), Padding = new Thickness(10, 5, 10, 5) };
             button.Click += (_, _) => { try { clicked(); } catch (Exception error) { Line("FAILED: " + error.Message); } };
@@ -88,14 +195,11 @@ public partial class MainWindow
         stop.IsEnabled = privateHost is not null;
         address.IsEnabled = privateHost is null;
         panel.Children.Add(actions);
-        var key = new PasswordBox { Margin = new Thickness(0, 4, 0, 8) };
-        panel.Children.Add(new TextBlock { Text = "Private server registration key (shared privately by the host)" });
-        panel.Children.Add(key);
-        void ReadKey() {
-            if (privateHostReady) {
-                try { key.Password = File.ReadAllText(Path.Combine(privateHostData, "registration-key.txt")).Trim(); }
-                catch (IOException error) { Line("FAILED: " + error.Message); }
-            }
+        // This PC's own key while hosting. Never the Join section's box, which may hold a friend's.
+        string OwnKey() {
+            if (!privateHostReady) return "";
+            try { return File.ReadAllText(Path.Combine(privateHostData, "registration-key.txt")).Trim(); }
+            catch (IOException error) { Line("FAILED: " + error.Message); return ""; }
         }
         void RefreshHost() {
             start.IsEnabled = privateHost is null;
@@ -111,11 +215,13 @@ public partial class MainWindow
             Line(text);
             if (text.StartsWith("READY:")) {
                 privateHostReady = true;
-                ReadKey();
+                privateJoinKey = OwnKey();
+                store.Set("private_join_address", privateHostAddress);
+                store.Save();
+                privateJoinRefresh?.Invoke();
                 RefreshHost();
             }
         };
-        ReadKey();
         RefreshHost();
         start.Click += (_, _) => {
             try {
@@ -152,41 +258,18 @@ public partial class MainWindow
         Button("Use address", connections, () => {
             var host = Host();
             store.Set("private_host_address", host);
-            store.Set("online", "1"); store.Set("online_bbsc", "1"); store.Set("online_pool", "seamless");
-            store.Set("skip_network_choice", "0"); store.Set("online_upnp", "0");
-            store.Set("online_community", "http://" + host); store.Set("online_server", host + ":31313");
-            store.Set("online_webapi", "http://" + host + ":31315"); store.Save();
+            SelectPrivateServer(host);
             Line("Private-server connection selected. Each player needs an account on this server.");
             Dispatcher.BeginInvoke(() => { if (shownSection is not null) BuildSection(shownSection); });
         });
         Button("Copy details", connections, () => {
             var host = Host();
             var details = $"bbglorp private server\nHost: {host}\nCo-op: {host}:31313\nWebAPI: http://{host}:31315\nGame server: http://{host}\n";
-            if (key.Password.Length > 0) details += "Registration key: " + key.Password + "\n";
+            if (OwnKey() is { Length: > 0 } own) details += "Registration key: " + own + "\n";
             if (host == "127.0.0.1") details += "Loopback works on this PC only. Choose a LAN/VPN address for friends.\n";
-            Clipboard.SetText(details); Line("Connection details copied. Share privately; they include the registration key when filled.");
+            Clipboard.SetText(details); Line("Connection details copied. Share privately; they include the registration key while hosting.");
         });
         panel.Children.Add(connections);
-        var email = new TextBox { Margin = new Thickness(0, 4, 0, 8) };
-        panel.Children.Add(new TextBlock { Text = "Account email — uses the Online ID and password entered above" });
-        panel.Children.Add(email);
-        var accounts = new StackPanel { Orientation = Orientation.Horizontal };
-        var create = Button("Create account", accounts, () => { });
-        create.Click += async (_, _) => {
-            create.IsEnabled = false;
-            try {
-                var info = PrivateTool("register", Host());
-                using var child = Process.Start(info) ?? throw new IOException("Could not start account tool.");
-                var output = child.StandardOutput.ReadToEndAsync(); var error = child.StandardError.ReadToEndAsync();
-                await child.StandardInput.WriteLineAsync(JsonSerializer.Serialize(new {
-                    name = store.Get("online_npid"), password = store.Get("online_password"), email = email.Text.Trim(), key = key.Password }));
-                child.StandardInput.Close();
-                await child.WaitForExitAsync();
-                privateHostOutput?.Invoke((await output + await error).Trim());
-            } catch (Exception error) { Line("FAILED: " + error.Message); }
-            finally { create.IsEnabled = true; }
-        };
-        panel.Children.Add(accounts);
         panel.Children.Add(log);
         var logs = new StackPanel { Orientation = Orientation.Horizontal };
         Button("Copy log", logs, () => Clipboard.SetText(privateHostLog));

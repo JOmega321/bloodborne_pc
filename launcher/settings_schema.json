@@ -2390,6 +2390,31 @@
      }
     },
     {
+     "key": "private_join",
+     "type": "special",
+     "store": "settings",
+     "default": "",
+     "platforms": [
+      "windows"
+     ],
+     "group": {
+      "en": "Join private server",
+      "ru": "Join private server"
+     },
+     "title": {
+      "en": "Join private server",
+      "ru": "Join private server"
+     },
+     "description": {
+      "en": "Play on a friend's private server over the same LAN or virtual LAN. Enter the address they sent you, test it, then press Use this server.",
+      "ru": "Play on a friend's private server over the same LAN or VPN. Enter the address they sent you, test it, then press Use this server."
+     },
+     "visible_when": {
+      "key": "online_pool",
+      "value": "seamless"
+     }
+    },
+    {
      "key": "private_host",
      "type": "special",
      "store": "settings",

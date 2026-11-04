@@ -17,6 +17,18 @@ with tempfile.TemporaryDirectory(prefix='bbglorp host UI ') as work:
     window = LauncherWindow(app)
     assert window.host_start.get_label() == 'Start server'
     assert window.host_status.get_title() == 'Stopped'
+    # The Join section sits directly above the Host section.
+    groups = []
+    child = window.private_join_group.get_parent().get_first_child()
+    while child:
+        groups.append(child)
+        child = child.get_next_sibling()
+    assert groups.index(window.private_join_group) + 1 == groups.index(window.private_host_group)
+    window.join_address.set_text('100.64.12.9')
+    window.use_join_server(None)
+    assert window.server_row.get_text() == '100.64.12.9:31313'
+    assert window.community_row.get_text() == 'http://100.64.12.9'
+    window.show_join_rows([('<b>hostile & markup', '<span>', False)])  # plain text, no Pango error
     window.host_address.set_text('100.64.12.3')
     window.use_private_host(None)
     assert window.community_row.get_text() == 'http://100.64.12.3'
@@ -37,6 +49,12 @@ with tempfile.TemporaryDirectory(prefix='bbglorp host UI ') as work:
         window.host_start.emit('clicked')
         wait_for(lambda: getattr(window, '_host_ready', False) and window.host_key.get_text())
         assert window.host_status.get_title().startswith('Running')
+        assert window.join_address.get_text() == '127.0.0.1'
+        window.join_test.emit('clicked')
+        wait_for(lambda: len(window.join_rows) >= 6 and window.join_test.get_sensitive(), 15)
+        rows = [row.get_title() for row in window.join_rows]
+        assert not any('did not answer' in title for title in rows), rows
+        assert any('not that two-player gameplay works' in title for title in rows), rows
         window.npid_row.set_text('uiverify')
         window.password_row.set_text('ui-test-password')
         window.host_email.set_text('ui-test@example.invalid')
@@ -48,4 +66,5 @@ with tempfile.TemporaryDirectory(prefix='bbglorp host UI ') as work:
     finally:
         window.on_close(window)
         window.destroy()
-print('PASS: real GTK private host controls, saved connection selection, Start, account creation and Stop.')
+print('PASS: real GTK join and host controls, saved connection selection, Start, connection test against '
+      'the real services, account creation and Stop.')

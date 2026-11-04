@@ -11063,11 +11063,6 @@ void GiveBbscGuestDrop(s32 lot, u32 name) {
                        : std::string{"did not fit (carried items full)"});
     BBSC_TIMELINE("ITEMS", "guest drop: goods {} x{} from lot {} {}", item, count, lot,
                   slot >= 0 ? "added" : "did not fit");
-    static s64 notice_ms = 0;
-    if (slot >= 0 && SteadyNowMs() - notice_ms > 15'000) {
-        notice_ms = SteadyNowMs();
-        BbscAnnounce(u"An item was added to your items.", "enemy drop");
-    }
 }
 
 void TickBbscGuestDrops() {

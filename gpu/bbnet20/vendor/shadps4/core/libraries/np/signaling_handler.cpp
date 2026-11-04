@@ -208,6 +208,17 @@ void ProcessSignalingPacket(const void* data, u32 len, u32 from_addr, u16 from_p
         return;
     }
 
+    // BBSC life state ("SHAD" 0x23), also sent over the relay; OnBbscLifePacket drops a second
+    // delivery by its sequence. Every player sends this, so it says nothing about how our host
+    // talks: no NoteSignalingBbscPacket here.
+    if (type == 0x23) {
+        NpSignaling::BbscLifeReport life{};
+        if (NpSignaling::ParseBbscLifePacket({buf, nbytes}, life)) {
+            Core::Bloodborne::OnBbscLifePacket(life.player, life.dead, life.sequence);
+        }
+        return;
+    }
+
     if (nbytes == sizeof(NpSignaling::SignalingEchoPong) &&
         type == static_cast<u8>(NpSignaling::SignalingPacketType::EchoPong)) {
         NpSignaling::SignalingEchoPong pong{};

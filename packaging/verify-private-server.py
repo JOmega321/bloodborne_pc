@@ -74,6 +74,9 @@ def main():
         child = start()
         try:
             key = (state / 'registration-key.txt').read_text().strip()
+            # The real shadNet's UDP reply and every other service, as a joining player tests them.
+            results = host.check('127.0.0.1')
+            assert all(result['ok'] for result in results), results
             try:
                 host.register('127.0.0.1', 'verifywrong', 'test-password', 'wrong@example.invalid', 'wrong-key')
             except ValueError:
@@ -117,7 +120,7 @@ def main():
             stop(child)
         assert not any(key in line or 'test-password' in line for line in lines)
     print('PASS: packaged private host, account registration/key rejection, password matching, '
-          'two-way relay, paths with spaces, EOF cleanup and account persistence.')
+          'connection test against real services, two-way relay, paths with spaces, EOF cleanup and account persistence.')
 
 
 if __name__ == '__main__':

@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 TCP_PORTS = (31313, 31315, 20443, 20444)
 UDP_PORTS = (31314,)
 HEADER = struct.Struct('<BHIQ')
+STUN_PROBE_ID = b'.bbglorp-test'
 
 
 def address(value):
@@ -97,6 +98,141 @@ def register(host, name, password, email, key=''):
             raise ValueError(messages.get(code, f'Account registration failed (code {code}).'))
 
 
+def public_warning(host):
+    """Text for a globally routable address: shadNet and the game server have no encryption."""
+    if not ipaddress.ip_address(address(host)).is_global:
+        return ''
+    return ('WARNING: ' + host + ' is a public Internet address. This server does not encrypt '
+            'traffic, so passwords and game data can be read on the way. Prefer a VPN address.')
+
+
+def stun_ping():
+    # shadNet's legacy framing: [FFFF src vport][FFFF dst vport] + StunPing. The '.' cannot occur
+    # in a registered Online ID, so the server's endpoint record for it never matches a player.
+    return b'\xff\xff\xff\xff\x01' + STUN_PROBE_ID.ljust(16, b'\0') + bytes(4)
+
+
+def check_udp(host, timeout):
+    # Connected: only the server's own address can answer. Same reply rule as the game's client
+    # (p2p_codec.cpp, FramingCodec::Decode), so a pass means the game would accept it too.
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        sock.settimeout(timeout / 3)
+        sock.connect((host, 31314))
+        for attempt in range(3):
+            sock.send(stun_ping())
+            try:
+                reply = sock.recv(64)
+            except socket.timeout:
+                if attempt == 2:
+                    raise
+                continue
+            if len(reply) == 10 and reply[:4] == b'\xff\xff\xff\xff':
+                return
+            raise ValueError('The reply is not from a shadNet server.')
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *_):
+        raise ValueError('The server answered with a redirect.')
+
+
+def check_webapi(host, timeout):
+    opener = urllib.request.build_opener(NoRedirect)
+    with opener.open('http://' + host + ':31315/status', timeout=timeout) as reply:
+        if not json.loads(reply.read(4096)).get('ok'):
+            raise ValueError('WebAPI is not ready.')
+
+
+def check_game(host, timeout):
+    from online import game_status
+    ok, detail = game_status('http://' + host, timeout=timeout)
+    if not ok:
+        raise ValueError(detail)
+
+
+def check_shadnet(host, timeout):
+    with socket.create_connection((host, 31313), timeout=timeout) as sock:
+        handshake(sock)
+
+
+def check_relay(host, timeout):
+    socket.create_connection((host, 20444), timeout=timeout).close()
+
+
+CHECKS = (('shadnet', 'Matchmaking (TCP 31313)', check_shadnet),
+          ('stun', 'Matching (UDP 31314)', check_udp),
+          ('webapi', 'WebAPI (TCP 31315)', check_webapi),
+          ('game', 'Game server (TCP 20443)', check_game),
+          ('relay', 'Co-op relay (TCP 20444)', check_relay))
+
+
+def failure_hint(name, error):
+    text = str(error).lower()
+    # Windows reports a closed UDP port as a connection reset on the next receive.
+    closed_udp = name == 'stun' and isinstance(error, ConnectionResetError)
+    if isinstance(error, ConnectionRefusedError) or 'refused' in text or closed_udp:
+        return 'Nothing is listening. Is the server started, and is the address right?'
+    if isinstance(error, TimeoutError) or 'timed out' in text:
+        if name == 'stun':
+            return ('No UDP reply. The host should allow UDP 31314 in its firewall; '
+                    'without it, joining rooms and direct connections may fail.')
+        return 'No answer. Check the address, the VPN on both PCs and the host\'s firewall.'
+    if 'unreachable' in text or isinstance(error, socket.gaierror):
+        return 'This PC has no route to that address. Check the address and the VPN.'
+    return 'Something answered, but not a matching private server. Is the address right?'
+
+
+def check(host, timeout=4):
+    """One result per service, in CHECKS order. Everything from the network is plain data.
+
+    Parallel with one deadline: a firewalled host costs one timeout, not five, and a server
+    dripping bytes cannot hold the caller. Threads left behind are daemons and end with their
+    socket timeouts.
+    """
+    host = address(host)
+    results = [dict(name=name, label=label, address=host, ok=False, detail='Timed out.',
+                    hint=failure_hint(name, socket.timeout()))
+               for name, label, _ in CHECKS]
+    def run(result, probe):
+        try:
+            probe(host, timeout)
+            update = dict(ok=True, detail='', hint='')
+        except (OSError, ValueError) as error:
+            update = dict(ok=False, detail=str(error)[:300], hint=failure_hint(result['name'], error))
+        result.update(update)
+    threads = [threading.Thread(target=run, args=(result, probe), daemon=True)
+               for result, (_, _, probe) in zip(results, CHECKS)]
+    for thread in threads:
+        thread.start()
+    deadline = time.monotonic() + timeout + 2
+    for thread in threads:
+        thread.join(max(0, deadline - time.monotonic()))
+    return [dict(result) for result in results]
+
+
+def is_this_pc(host):
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.bind((host, 0))
+        return True
+    except OSError:
+        return False
+
+
+def check_summary(host, results):
+    """What the results prove, and no more."""
+    failed = sum(not result['ok'] for result in results)
+    if failed:
+        text = f'{failed} of {len(results)} services did not answer correctly.'
+    else:
+        text = ('All services answered. This shows the server is reachable, '
+                'not that two-player gameplay works.')
+    if is_this_pc(host):
+        text += (' This address is on this PC, so the test skips your firewall and network. '
+                 'Have your friend run it from their PC.')
+    return text
+
+
 class HostServer:
     def __init__(self, state, host, emit=print, runtime=None):
         self.state = Path(state)
@@ -117,6 +253,9 @@ class HostServer:
             self.emit(message)
 
     def start(self, cancel=None):
+        warning = public_warning(self.host)
+        if warning:
+            self.log(warning)
         binary = self.runtime / ('shadnet.exe' if os.name == 'nt' else 'shadnet')
         if not binary.is_file():
             raise RuntimeError('The private-server runtime is missing from this package.')
@@ -241,17 +380,9 @@ class HostServer:
             raise
 
     def probe(self):
-        from online import game_status
-        with socket.create_connection((self.host, 31313), timeout=0.5) as sock:
-            handshake(sock)
-        with urllib.request.urlopen('http://' + self.host + ':31315/status', timeout=0.5) as reply:
-            if not json.load(reply).get('ok'):
-                raise ValueError('WebAPI is not ready.')
-        ok, detail = game_status('http://' + self.host, timeout=0.5)
-        if not ok:
-            raise ValueError(detail)
-        with socket.create_connection((self.host, 20444), timeout=0.5):
-            pass
+        for result in check(self.host, timeout=0.5):
+            if not result['ok']:
+                raise ValueError(result['label'] + ': ' + result['detail'])
 
     def stop(self):
         children, self.children = self.children, []
@@ -279,12 +410,18 @@ class HostServer:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=('serve', 'register', 'settings'))
+    parser.add_argument('command', choices=('serve', 'register', 'settings', 'check'))
     parser.add_argument('--address', required=True)
     parser.add_argument('--state', type=Path)
     args = parser.parse_args()
     if args.command == 'settings':
         print(json.dumps(connection_settings(args.address)), flush=True)
+        return
+    if args.command == 'check':
+        results = check(args.address)
+        for result in results:
+            print(json.dumps(result), flush=True)
+        print(json.dumps(dict(summary=check_summary(address(args.address), results))), flush=True)
         return
     if args.command == 'register':
         request = json.loads(sys.stdin.readline(8192))

@@ -757,8 +757,12 @@ ROUTES = {
 BODY_SAMPLES = 3
 _BODY_COUNTS = {}
 
+MAX_BODY = 1024 * 1024  # the game's JSON calls are far smaller; refuse before allocating
+
+
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
+    timeout = 120  # a stalled client must not keep its thread for ever
 
     def log_message(self, fmt, *a):
         pass
@@ -792,7 +796,15 @@ class Handler(BaseHTTPRequestHandler):
         caller = self.client_address[0]
         is_local = caller in LOCAL_ADDRESSES or (ARGS.advertise and caller == ARGS.advertise)
         path = self.path.split("?", 1)[0]
-        length = int(self.headers.get("Content-Length") or 0)
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            length = -1
+        if not 0 <= length <= MAX_BODY:
+            # The body stays unread, so the connection cannot carry another request.
+            self.close_connection = True
+            self._send(b"", "text/plain", status=413)
+            return
         payload = self.rfile.read(length).decode("utf-8", "replace") if length else ""
 
         bbhost = ARGS.bbhost and bbhost_service.is_bbhost(self.headers)
@@ -904,6 +916,7 @@ import struct
 RELAY_CLIENTS = {}  # conn -> RelayClient
 RELAY_LOCK = threading.Lock()
 RELAY_QUEUE_LIMIT = 512 * 1024  # bytes waiting for one player before he is dropped as too slow
+RELAY_SLOTS = threading.BoundedSemaphore(16)  # sessions hold 5 hunters; the rest covers reconnects
 
 
 class RelayClient:
@@ -1039,11 +1052,20 @@ def start_relay(host, port):
     def accept_loop():
         while True:
             conn, address = listener.accept()
+            if not RELAY_SLOTS.acquire(blocking=False):
+                print("      relay: refused {}:{}, too many connections".format(*address), flush=True)
+                conn.close()
+                continue
             conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             conn.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
             if hasattr(socket, "TCP_USER_TIMEOUT"):  # Linux: unacked data for 20 s = dead link
                 conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_USER_TIMEOUT, 20000)
-            threading.Thread(target=_relay_client, args=(conn, address), daemon=True).start()
+            def serve(conn=conn, address=address):
+                try:
+                    _relay_client(conn, address)
+                finally:
+                    RELAY_SLOTS.release()
+            threading.Thread(target=serve, daemon=True).start()
 
     threading.Thread(target=accept_loop, daemon=True).start()
     print("BBSC relay on {}:{} (for the BBSC mod)".format(host, port))

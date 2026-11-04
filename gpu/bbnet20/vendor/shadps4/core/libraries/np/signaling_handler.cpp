@@ -199,6 +199,15 @@ void ProcessSignalingPacket(const void* data, u32 len, u32 from_addr, u16 from_p
         return;
     }
 
+    // BBSC wipes: the host's bloodstain ("SHAD" 0x2B + u8 kind + u32 stain), also sent over the
+    // relay. A second delivery of the same event changes nothing in the game-tick consumer.
+    if (type == 0x2B && nbytes == 10) {
+        u32 stain = 0;
+        std::memcpy(&stain, buf + 6, 4);
+        Core::Bloodborne::OnBbscStainPacket(buf[5], stain);
+        return;
+    }
+
     if (nbytes == sizeof(NpSignaling::SignalingEchoPong) &&
         type == static_cast<u8>(NpSignaling::SignalingPacketType::EchoPong)) {
         NpSignaling::SignalingEchoPong pong{};

@@ -68,6 +68,7 @@ constexpr std::uint8_t ScaleType = 0x24;
 constexpr std::uint8_t PvpType = 0x25;
 constexpr std::uint8_t ProgressType = 0x26;
 constexpr std::uint8_t HostBossType = 0x27;
+constexpr std::uint8_t StainType = 0x2B; // u8 kind (1 new, 2 picked up, 3 lost) + u32 host's stain
 constexpr std::uint8_t AimedPlacementType = 0x31;
 constexpr std::uint8_t PeersType = 0x7F;
 constexpr std::uint8_t EnvelopeType = 0x40;
@@ -325,6 +326,10 @@ void Dispatch(const std::vector<std::uint8_t>& wrapped) {
         std::int32_t boss = -1;
         std::memcpy(&boss, frame.data() + 5, 4);
         Core::Bloodborne::OnBbscHostBossPacket(boss);
+    } else if (type == StainType && frame.size() >= 10) {
+        std::uint32_t stain = 0;
+        std::memcpy(&stain, frame.data() + 6, 4);
+        Core::Bloodborne::OnBbscStainPacket(frame[5], stain);
     } else if (type == Libraries::Np::NpSignaling::kSignalingBbscWorldFlagsType) {
         Core::Bloodborne::OnBbscWorldFlagsPacket(frame.data(),
                                                  static_cast<std::uint32_t>(frame.size()));

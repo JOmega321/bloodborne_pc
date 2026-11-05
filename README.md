@@ -386,8 +386,9 @@ MangoHud is bundled in the AppImage; enable its checkbox in the launcher. If Man
 installed system-wide, or Steam's performance overlay is on (Steam Deck game mode), only one
 overlay is drawn (two drew doubled, offset text): the AppImage always uses its own MangoHud and
 turns the host's layer off, because a host `libMangoHud.so` needs the host's spdlog/fmt versions and
-cannot load inside the AppImage (the overlay then never appeared). It still reads
-`~/.config/MangoHud/MangoHud.conf`.
+cannot load inside the AppImage (the overlay then never appeared). Your own
+`~/.config/MangoHud/MangoHud.conf` (or `MANGOHUD_CONFIG`) is used; the launcher's default lines
+(fps, frametime, GPU/CPU, RAM, VRAM) apply only when you have none.
 When running from source, install MangoHud separately. A diagnostic launch with
 `VK_LOADER_LAYERS_DISABLE=~implicit~` also disables MangoHud.
 

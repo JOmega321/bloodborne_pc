@@ -416,6 +416,15 @@ def online_module(pool="seamless"):
     return (PORT_DIR / ("bin" if PACKAGED else "out") / "gpu" / name).is_file()
 
 
+def mangohud_user_config(env):
+    """True when the user configures MangoHud themselves: MANGOHUD_CONFIG, MANGOHUD_CONFIGFILE or
+    a config file where MangoHud looks (the game process is named bb-probe)."""
+    if env.get("MANGOHUD_CONFIG") or env.get("MANGOHUD_CONFIGFILE"):
+        return True
+    base = Path(env.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "MangoHud"
+    return any((base / name).is_file() for name in ("MangoHud.conf", "bb-probe.conf"))
+
+
 def game_environment(s):
     """Environment for run.sh from the launcher settings."""
     env = dict(os.environ)
@@ -446,9 +455,11 @@ def game_environment(s):
         env["BB_DRAW_PIPE"] = s["draw_pipe"]
     if s["mangohud"]:
         env["MANGOHUD"] = "1"
-        # Its default lines and the game's RAM and VRAM (a MANGOHUD_CONFIG of the user's wins;
-        # set, it takes the config file's place).
-        env.setdefault("MANGOHUD_CONFIG", "fps,frametime,frame_timing,gpu_stats,cpu_stats,ram,vram")
+        # Its default lines and the game's RAM and VRAM, only when the user has no MangoHud
+        # configuration: MANGOHUD_CONFIG, once set, takes the config file's place, so setting it
+        # always hid the user's own ~/.config/MangoHud/MangoHud.conf.
+        if not mangohud_user_config(env):
+            env["MANGOHUD_CONFIG"] = "fps,frametime,frame_timing,gpu_stats,cpu_stats,ram,vram"
     if s["frame_stats"]:
         env["BB_FRAME_STATS"] = "1"
     if s.get("save_log"):

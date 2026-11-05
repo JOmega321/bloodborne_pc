@@ -88,5 +88,44 @@ class LauncherOnlineTests(unittest.TestCase):
         self.assertEqual(env['BB_SKIP_NETWORK_CHOICE'], '0')
 
 
+class MangohudConfigTests(unittest.TestCase):
+    """MANGOHUD_CONFIG, once set, replaces MangoHud.conf: the launcher's default lines are set
+    only when the user has no MangoHud configuration of their own."""
+
+    def environment(self, config_home, **extra):
+        settings = dict(launcher.DEFAULTS, game_dir="/games/CUSA03173", mangohud=True)
+        base = {key: value for key, value in os.environ.items()
+                if not key.startswith("MANGOHUD")}
+        with mock.patch.dict(os.environ, {**base, "XDG_CONFIG_HOME": str(config_home), **extra},
+                             clear=True):
+            return launcher.game_environment(settings)
+
+    def test_default_lines_without_a_user_config(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as home:
+            env = self.environment(home)
+        self.assertEqual(env["MANGOHUD"], "1")
+        self.assertIn("fps", env["MANGOHUD_CONFIG"])
+
+    def test_users_config_file_is_left_alone(self):
+        import pathlib
+        import tempfile
+        for name in ("MangoHud.conf", "bb-probe.conf"):
+            with tempfile.TemporaryDirectory() as home:
+                (pathlib.Path(home) / "MangoHud").mkdir()
+                (pathlib.Path(home) / "MangoHud" / name).write_text("fps\n")
+                env = self.environment(home)
+            self.assertEqual(env["MANGOHUD"], "1")
+            self.assertNotIn("MANGOHUD_CONFIG", env, name)
+
+    def test_users_variables_are_kept(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as home:
+            self.assertEqual(self.environment(home, MANGOHUD_CONFIG="cpu_stats")["MANGOHUD_CONFIG"],
+                             "cpu_stats")
+            env = self.environment(home, MANGOHUD_CONFIGFILE="/x/y.conf")
+        self.assertNotIn("MANGOHUD_CONFIG", env)
+
+
 if __name__ == "__main__":
     unittest.main()
